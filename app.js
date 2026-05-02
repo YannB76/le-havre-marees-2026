@@ -298,10 +298,6 @@ function drawChart() {
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, width, height);
 
-  const seaY = yFor(4.7);
-  ctx.fillStyle = "rgba(186, 217, 230, 0.72)";
-  ctx.fillRect(pad.left, seaY, plotW, pad.top + plotH - seaY);
-
   ctx.strokeStyle = "#d7e1ea";
   ctx.lineWidth = 1;
   ctx.fillStyle = "#283344";
@@ -326,19 +322,75 @@ function drawChart() {
   ctx.fillText("Hauteur (m)", 0, 0);
   ctx.restore();
 
+  let samples = [];
   if (points.length > 1) {
-    ctx.beginPath();
+    samples = [];
     for (let minute = 0; minute <= 24 * 60; minute += 8) {
       const absolute = dayStart + minute * 60000;
-      const h = interpolateHeight(points, absolute);
-      const x = xFor(minute);
-      const y = yFor(h);
-      if (minute === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+      samples.push({
+        minute,
+        height: interpolateHeight(points, absolute)
+      });
     }
+
+    ctx.beginPath();
+    samples.forEach((sample, index) => {
+      const x = xFor(sample.minute);
+      const y = yFor(sample.height);
+      if (index === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.lineTo(xFor(24 * 60), pad.top + plotH);
+    ctx.lineTo(xFor(0), pad.top + plotH);
+    ctx.closePath();
+    ctx.fillStyle = "rgba(186, 217, 230, 0.45)";
+    ctx.fill();
+
+    ctx.beginPath();
+    samples.forEach((sample, index) => {
+      const x = xFor(sample.minute);
+      const y = yFor(sample.height);
+      if (index === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
     ctx.strokeStyle = "#0f766e";
     ctx.lineWidth = 3;
     ctx.stroke();
+
+    const now = new Date();
+    const isSelectedToday = toIsoDate(now) === state.selectedDate;
+    if (isSelectedToday) {
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      const nowHeight = interpolateHeight(points, dayStart + nowMinutes * 60000);
+      const nowX = xFor(nowMinutes);
+      const nowY = yFor(nowHeight);
+
+      ctx.save();
+      ctx.setLineDash([6, 5]);
+      ctx.strokeStyle = "#9f2d20";
+      ctx.lineWidth = 2;
+      line(nowX, pad.top, nowX, pad.top + plotH);
+      ctx.restore();
+
+      ctx.beginPath();
+      ctx.arc(nowX, nowY, 6, 0, Math.PI * 2);
+      ctx.fillStyle = "#9f2d20";
+      ctx.fill();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = "#9f2d20";
+      ctx.font = "700 14px Arial";
+      const label = `Maintenant ${formatHeight(nowHeight)}`;
+      const labelX = Math.min(nowX + 8, pad.left + plotW - 132);
+      ctx.fillText(label, labelX, Math.max(nowY - 10, pad.top + 16));
+      els.rangeLabel.textContent = label;
+    } else {
+      els.rangeLabel.textContent = `${formatHeight(minH)} - ${formatHeight(maxH)}`;
+    }
+  } else {
+    els.rangeLabel.textContent = `${formatHeight(minH)} - ${formatHeight(maxH)}`;
   }
 
   const dayEvents = state.days.get(state.selectedDate) ?? [];
@@ -348,8 +400,6 @@ function drawChart() {
     ctx.fillStyle = event.type === "Pleine mer" ? "#1f3a5f" : "#0f766e";
     ctx.fill();
   });
-
-  els.rangeLabel.textContent = `${formatHeight(minH)} - ${formatHeight(maxH)}`;
 
   function xFor(minutes) {
     return pad.left + (minutes / 1440) * plotW;
