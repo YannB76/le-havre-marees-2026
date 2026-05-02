@@ -23,6 +23,7 @@
         <nav class="view-menu" aria-label="Navigation principale">
           <button class="view-button is-active" type="button" data-view="day">Aujourd'hui</button>
           <button class="view-button" type="button" data-view="big-tides">Grosses marées</button>
+          <button class="view-button" type="button" data-view="moon-calendar">Calendrier lunaire</button>
         </nav>
       </header>
 
@@ -95,7 +96,7 @@
               <span>Courbe estimative de la journée</span>
               <span id="range-label"></span>
             </div>
-            <canvas id="tide-chart" width="740" height="390"></canvas>
+            <canvas id="tide-chart" width="740" height="500"></canvas>
           </section>
         </section>
 
@@ -122,6 +123,16 @@
             Les grandes marées peuvent découvrir de larges zones, mais les horaires réels et les conditions météo doivent toujours être vérifiés avant de partir.
           </p>
           <div class="big-tide-list" id="big-tide-list"></div>
+        </section>
+
+        <section class="moon-calendar-panel view-panel is-hidden" id="moon-calendar-view" aria-labelledby="moon-calendar-title">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Phases principales</span>
+              <h2 id="moon-calendar-title">Calendrier lunaire 2026</h2>
+            </div>
+          </div>
+          <div class="moon-calendar-grid" id="moon-calendar-grid"></div>
         </section>
 
         <aside class="week-panel" aria-labelledby="week-title">

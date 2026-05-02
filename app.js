@@ -41,9 +41,11 @@ const els = {
   viewButtons: document.querySelectorAll("[data-view]"),
   dayView: document.querySelector("#day-view"),
   bigTidesView: document.querySelector("#big-tides-view"),
+  moonCalendarView: document.querySelector("#moon-calendar-view"),
   bigTideThreshold: document.querySelector("#big-tide-threshold"),
   bigTideMonth: document.querySelector("#big-tide-month"),
-  bigTideList: document.querySelector("#big-tide-list")
+  bigTideList: document.querySelector("#big-tide-list"),
+  moonCalendarGrid: document.querySelector("#moon-calendar-grid")
 };
 
 init();
@@ -180,6 +182,7 @@ function render() {
   renderAstronomy();
   renderDayList(monthKey);
   renderBigTides();
+  renderMoonCalendar();
   drawChart();
 }
 
@@ -206,6 +209,7 @@ function nextMoonPhaseLabel(dateString) {
 function renderView() {
   els.dayView.classList.toggle("is-hidden", state.view !== "day");
   els.bigTidesView.classList.toggle("is-hidden", state.view !== "big-tides");
+  els.moonCalendarView.classList.toggle("is-hidden", state.view !== "moon-calendar");
   els.viewButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.view === state.view);
   });
@@ -315,18 +319,50 @@ function renderBigTides() {
   });
 }
 
+function renderMoonCalendar() {
+  els.moonCalendarGrid.innerHTML = "";
+  MONTHS.forEach((month, index) => {
+    const monthNumber = index + 1;
+    const phases = state.moonPhases.filter((item) => Number(item.date.slice(5, 7)) === monthNumber);
+    const card = document.createElement("article");
+    card.className = "moon-month-card";
+    card.innerHTML = `
+      <h3>${capitalize(month)}</h3>
+      <div class="moon-phase-row">
+        ${phases.map((item) => `
+          <button class="moon-phase-item" type="button" data-date="${item.date}" title="${item.phase} le ${formatShortDate(item.date)}">
+            <span class="moon-icon ${phaseClass(item.phase)}" aria-hidden="true"></span>
+            <span class="moon-day">${Number(item.date.slice(8, 10))}</span>
+            <span class="moon-label">${phaseShortLabel(item.phase)}</span>
+          </button>
+        `).join("")}
+      </div>
+    `;
+    card.querySelectorAll(".moon-phase-item").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.selectedDate = button.dataset.date;
+        state.view = "day";
+        render();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    });
+    els.moonCalendarGrid.append(card);
+  });
+}
+
 function drawChart() {
   const canvas = els.chart;
   const ctx = canvas.getContext("2d");
   const width = canvas.width;
   const height = canvas.height;
-  const pad = { top: 18, right: 22, bottom: 42, left: 58 };
+  const pad = { top: 18, right: 22, bottom: 150, left: 58 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
   const minH = 0.8;
   const maxH = 8.4;
   const dayStart = new Date(`${state.selectedDate}T00:00:00`).getTime();
   const points = state.events.filter((event) => event.sortTime >= dayStart - 14 * 3600000 && event.sortTime <= dayStart + 38 * 3600000);
+  const astronomy = state.astronomy[state.selectedDate];
 
   ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = "#ffffff";
@@ -349,7 +385,7 @@ function drawChart() {
 
   ctx.fillStyle = "#000000";
   ctx.font = "15px Arial";
-  ctx.fillText("Heures", pad.left + plotW / 2 - 22, height - 9);
+  ctx.fillText("Heures", pad.left + plotW / 2 - 22, pad.top + plotH + 40);
   ctx.save();
   ctx.translate(20, pad.top + plotH / 2 + 28);
   ctx.rotate(-Math.PI / 2);
@@ -435,6 +471,8 @@ function drawChart() {
     ctx.fill();
   });
 
+  drawAstronomyMarkers();
+
   function xFor(minutes) {
     return pad.left + (minutes / 1440) * plotW;
   }
@@ -448,6 +486,54 @@ function drawChart() {
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
     ctx.stroke();
+  }
+
+  function drawAstronomyMarkers() {
+    if (!astronomy) return;
+
+    const sunY = pad.top + plotH + 58;
+    const moonY = pad.top + plotH + 112;
+    const phase = phaseForDate(state.selectedDate);
+    const markers = [
+      { time: astronomy.sunrise, y: sunY, type: "sun", arrow: "↑" },
+      { time: astronomy.sunset, y: sunY, type: "sun", arrow: "↓" },
+      { time: astronomy.moonrise, y: moonY, type: "moon", arrow: "↑", phase },
+      { time: astronomy.moonset, y: moonY, type: "moon", arrow: "↓", phase }
+    ].filter((marker) => marker.time);
+
+    ctx.save();
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, pad.top + plotH + 20);
+    ctx.lineTo(pad.left + plotW, pad.top + plotH + 20);
+    ctx.stroke();
+
+    markers.forEach((marker) => {
+      const x = xFor(toMinutes(marker.time));
+      ctx.save();
+      ctx.setLineDash([4, 5]);
+      ctx.strokeStyle = marker.type === "sun" ? "rgba(216, 132, 22, 0.45)" : "rgba(31, 58, 95, 0.35)";
+      line(x, pad.top, x, pad.top + plotH + 18);
+      ctx.restore();
+
+      if (marker.type === "sun") {
+        drawSunIcon(ctx, x, marker.y, 9);
+        ctx.fillStyle = "#d88416";
+      } else {
+        drawMoonIcon(ctx, x, marker.y, 11, marker.phase);
+        ctx.fillStyle = "#1f3a5f";
+      }
+
+      ctx.font = "700 12px Arial";
+      ctx.textAlign = "left";
+      ctx.fillText(marker.arrow, x + 13, marker.y + 4);
+      ctx.fillStyle = "#334155";
+      ctx.font = "12px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(marker.time, x, marker.y + 25);
+    });
+    ctx.restore();
   }
 }
 
@@ -552,6 +638,87 @@ function formatEventList(events, includeCoeff = false) {
     const coeff = includeCoeff && event.coefficient ? `, coeff. ${event.coefficient}` : "";
     return `${event.time} (${formatHeight(event.height)}${coeff})`;
   }).join(" · ");
+}
+
+function phaseForDate(dateString) {
+  const exact = state.moonPhases.find((item) => item.date === dateString);
+  if (exact) return exact.phase;
+
+  const selected = parseLocalDate(dateString).getTime();
+  let closest = null;
+  let closestDistance = Infinity;
+  state.moonPhases.forEach((item) => {
+    const distance = Math.abs(parseLocalDate(item.date).getTime() - selected);
+    if (distance < closestDistance) {
+      closest = item;
+      closestDistance = distance;
+    }
+  });
+  return closest?.phase ?? "Nouvelle Lune";
+}
+
+function phaseClass(phase) {
+  if (phase === "Pleine Lune") return "phase-full";
+  if (phase === "Nouvelle Lune") return "phase-new";
+  if (phase === "Premier Quartier") return "phase-first";
+  if (phase === "Dernier Quartier") return "phase-last";
+  return "phase-new";
+}
+
+function phaseShortLabel(phase) {
+  if (phase === "Pleine Lune") return "Pleine";
+  if (phase === "Nouvelle Lune") return "Nouvelle";
+  if (phase === "Premier Quartier") return "1er quart.";
+  if (phase === "Dernier Quartier") return "Dern. quart.";
+  return phase;
+}
+
+function drawSunIcon(ctx, x, y, radius) {
+  ctx.save();
+  ctx.strokeStyle = "#f59e0b";
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 8; i += 1) {
+    const angle = (i / 8) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(x + Math.cos(angle) * (radius + 3), y + Math.sin(angle) * (radius + 3));
+    ctx.lineTo(x + Math.cos(angle) * (radius + 8), y + Math.sin(angle) * (radius + 8));
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fillStyle = "#fbbf24";
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawMoonIcon(ctx, x, y, radius, phase) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fillStyle = "#10213a";
+  ctx.fill();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.clip();
+
+  if (phase === "Pleine Lune") {
+    ctx.fillStyle = "#dcecff";
+    ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+  } else if (phase === "Premier Quartier") {
+    ctx.fillStyle = "#dcecff";
+    ctx.fillRect(x, y - radius, radius, radius * 2);
+  } else if (phase === "Dernier Quartier") {
+    ctx.fillStyle = "#dcecff";
+    ctx.fillRect(x - radius, y - radius, radius, radius * 2);
+  }
+
+  ctx.restore();
+  ctx.strokeStyle = "rgba(31, 58, 95, 0.5)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.restore();
 }
 
 function capitalize(value) {
