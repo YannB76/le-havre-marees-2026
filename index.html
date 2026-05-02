@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0f766e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Marées LH 2026">
+    <title>Le Havre Marées 2026</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="icons/icon.svg">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="site-header">
+        <div class="brand">
+          <span class="brand-kicker">Carnet personnel</span>
+          <span class="brand-main">Le Havre Marées 2026</span>
+          <span class="brand-sub">Horaires, hauteurs et coefficients pour Le Havre</span>
+        </div>
+        <nav class="view-menu" aria-label="Navigation principale">
+          <button class="view-button is-active" type="button" data-view="day">Aujourd'hui</button>
+          <button class="view-button" type="button" data-view="big-tides">Grosses marées</button>
+        </nav>
+      </header>
+
+      <main>
+        <section class="day-panel view-panel" id="day-view" aria-labelledby="current-date">
+          <div class="date-strip">
+            <button class="icon-button" id="previous-day" type="button" aria-label="Jour précédent" title="Jour précédent">‹</button>
+            <div class="date-heading">
+              <h1 id="current-date">Chargement</h1>
+              <p id="date-meta">Le Havre · UTC+1/UTC+2 selon la saison</p>
+            </div>
+            <button class="icon-button" id="next-day" type="button" aria-label="Jour suivant" title="Jour suivant">›</button>
+          </div>
+
+          <div class="controls">
+            <label class="date-control">
+              <span>Date</span>
+              <input id="date-picker" type="date" min="2026-01-01" max="2026-12-31">
+            </label>
+            <button class="compact-button" id="today-button" type="button">Aujourd'hui</button>
+          </div>
+
+          <div class="summary-grid">
+            <article class="next-card">
+              <span class="eyebrow">Prochaine marée</span>
+              <strong id="next-tide-name">-</strong>
+              <span id="next-tide-detail">-</span>
+            </article>
+            <article>
+              <span class="eyebrow">Pleine mer</span>
+              <strong id="high-tide-summary">-</strong>
+            </article>
+            <article>
+              <span class="eyebrow">Basse mer</span>
+              <strong id="low-tide-summary">-</strong>
+            </article>
+          </div>
+
+          <div class="tide-table-wrap">
+            <table class="tide-table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Heure</th>
+                  <th>Hauteur</th>
+                  <th>Coeff.</th>
+                </tr>
+              </thead>
+              <tbody id="day-events"></tbody>
+            </table>
+          </div>
+
+          <section class="chart-panel" aria-label="Marégramme du jour">
+            <div class="chart-title">
+              <span>Courbe estimative de la journée</span>
+              <span id="range-label"></span>
+            </div>
+            <canvas id="tide-chart" width="740" height="390"></canvas>
+          </section>
+        </section>
+
+        <section class="big-tides-panel view-panel is-hidden" id="big-tides-view" aria-labelledby="big-tides-title">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Repérage pêche à pied</span>
+              <h2 id="big-tides-title">Grosses marées 2026</h2>
+            </div>
+            <label class="threshold-control">
+              <span>Coefficient minimum</span>
+              <select id="big-tide-threshold">
+                <option value="90">90</option>
+                <option value="95" selected>95</option>
+                <option value="100">100</option>
+              </select>
+            </label>
+            <label class="threshold-control">
+              <span>Mois</span>
+              <select id="big-tide-month"></select>
+            </label>
+          </div>
+          <p class="notice">
+            Les grandes marées peuvent découvrir de larges zones, mais les horaires réels et les conditions météo doivent toujours être vérifiés avant de partir.
+          </p>
+          <div class="big-tide-list" id="big-tide-list"></div>
+        </section>
+
+        <aside class="week-panel" aria-labelledby="week-title">
+          <div class="week-header">
+            <h2 id="week-title">Autour de cette date</h2>
+            <select id="month-select" aria-label="Choisir un mois"></select>
+          </div>
+          <div class="day-list" id="day-list"></div>
+        </aside>
+      </main>
+      <footer class="site-footer">
+        Application personnelle de consultation. Les horaires et hauteurs affichés ne remplacent pas les documents officiels ni les consignes de sécurité en mer.
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
