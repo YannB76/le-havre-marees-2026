@@ -1,4 +1,4 @@
-const CACHE_NAME = "marees-le-havre-2026-v6";
+const CACHE_NAME = "marees-le-havre-2026-v7";
 const ASSETS = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const ASSETS = [
   "./app.js",
   "./manifest.webmanifest",
   "./marees_le_havre_2026_evenements_COMPLET.csv",
+  "./astronomie_le_havre_2026.json",
   "./icons/icon.svg"
 ];
 

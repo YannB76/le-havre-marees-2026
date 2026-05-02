@@ -1,4 +1,5 @@
 const CSV_URL = "marees_le_havre_2026_evenements_COMPLET.csv";
+const ASTRONOMY_URL = "astronomie_le_havre_2026.json";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MONTHS = [
   "janvier", "fevrier", "mars", "avril", "mai", "juin",
@@ -10,6 +11,8 @@ const SHORT_WEEKDAYS = ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."];
 const state = {
   events: [],
   days: new Map(),
+  astronomy: {},
+  moonPhases: [],
   selectedDate: "2026-01-01",
   view: "day",
   bigTideThreshold: 95,
@@ -28,6 +31,9 @@ const els = {
   lowSummary: document.querySelector("#low-tide-summary"),
   nextTideName: document.querySelector("#next-tide-name"),
   nextTideDetail: document.querySelector("#next-tide-detail"),
+  sunTimes: document.querySelector("#sun-times"),
+  moonTimes: document.querySelector("#moon-times"),
+  moonPhase: document.querySelector("#moon-phase"),
   rangeLabel: document.querySelector("#range-label"),
   chart: document.querySelector("#tide-chart"),
   dayList: document.querySelector("#day-list"),
@@ -44,10 +50,17 @@ init();
 
 async function init() {
   try {
-    const response = await fetch(CSV_URL, { cache: "no-store" });
-    if (!response.ok) throw new Error("CSV introuvable");
-    const text = await response.text();
+    const [csvResponse, astronomyResponse] = await Promise.all([
+      fetch(CSV_URL, { cache: "no-store" }),
+      fetch(ASTRONOMY_URL, { cache: "no-store" })
+    ]);
+    if (!csvResponse.ok) throw new Error("CSV introuvable");
+    if (!astronomyResponse.ok) throw new Error("Donnees astronomiques introuvables");
+    const text = await csvResponse.text();
+    const astronomy = await astronomyResponse.json();
     loadData(text);
+    state.astronomy = astronomy.days ?? {};
+    state.moonPhases = astronomy.phases ?? [];
     setupControls();
     selectInitialDate();
     render();
@@ -164,9 +177,30 @@ function render() {
   renderView();
   renderTable(events);
   renderSummaries(events);
+  renderAstronomy();
   renderDayList(monthKey);
   renderBigTides();
   drawChart();
+}
+
+function renderAstronomy() {
+  const data = state.astronomy[state.selectedDate];
+  if (!data) {
+    els.sunTimes.textContent = "-";
+    els.moonTimes.textContent = "-";
+    els.moonPhase.textContent = "-";
+    return;
+  }
+
+  els.sunTimes.textContent = `${data.sunrise ?? "-"} / ${data.sunset ?? "-"}`;
+  els.moonTimes.textContent = `${data.moonrise ?? "-"} / ${data.moonset ?? "-"}`;
+  els.moonPhase.textContent = data.moonPhase ?? nextMoonPhaseLabel(state.selectedDate);
+}
+
+function nextMoonPhaseLabel(dateString) {
+  const next = state.moonPhases.find((item) => item.date >= dateString);
+  if (!next) return "-";
+  return `Prochaine : ${next.phase} le ${formatShortDate(next.date)}`;
 }
 
 function renderView() {
@@ -501,6 +535,11 @@ function toMinutes(time) {
 
 function formatLongDate(date) {
   return `${WEEKDAYS[date.getDay()]} ${String(date.getDate()).padStart(2, "0")} ${capitalize(MONTHS[date.getMonth()])} 2026`;
+}
+
+function formatShortDate(dateString) {
+  const date = parseLocalDate(dateString);
+  return `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
 function formatHeight(value) {

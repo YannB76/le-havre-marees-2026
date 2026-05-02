@@ -203,6 +203,28 @@ select {
   margin-bottom: 12px;
 }
 
+.astro-panel {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.astro-panel article {
+  min-height: 68px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.astro-panel strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--teal-dark);
+  font-size: 1.05rem;
+}
+
 .summary-grid article {
   min-height: 76px;
   padding: 10px 12px;
@@ -459,6 +481,10 @@ canvas {
   }
 
   .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .astro-panel {
     grid-template-columns: 1fr;
   }
 

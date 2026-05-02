@@ -9,6 +9,7 @@ Application web statique de consultation des horaires de marées du Havre pour 2
 - Courbe estimative de la journée.
 - Liste mensuelle autour de la date choisie.
 - Vue "Grosses marées" avec filtre par coefficient et par mois.
+- Heures de lever/coucher du soleil, lever/coucher de la lune et phases lunaires.
 - Installation possible sur iPhone via "Ajouter à l'écran d'accueil".
 
 ## Utilisation locale
