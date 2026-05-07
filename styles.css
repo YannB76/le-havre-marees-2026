@@ -112,6 +112,10 @@ main {
   display: none;
 }
 
+.week-panel.is-hidden {
+  display: none;
+}
+
 .date-strip {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr) 44px;

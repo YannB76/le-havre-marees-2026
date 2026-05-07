@@ -105,6 +105,7 @@ const els = {
   rangeLabel: document.querySelector("#range-label"),
   chart: document.querySelector("#tide-chart"),
   dayList: document.querySelector("#day-list"),
+  weekPanel: document.querySelector(".week-panel"),
   monthSelect: document.querySelector("#month-select"),
   viewButtons: document.querySelectorAll("[data-view]"),
   dayView: document.querySelector("#day-view"),
@@ -340,6 +341,7 @@ function renderView() {
   els.shoreFishingView.classList.toggle("is-hidden", state.view !== "shore-fishing");
   els.fishingRegulationsView.classList.toggle("is-hidden", state.view !== "fishing-regulations");
   els.catchLogView.classList.toggle("is-hidden", state.view !== "catch-log");
+  els.weekPanel.classList.toggle("is-hidden", state.view !== "day");
   els.viewButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.view === state.view);
   });
