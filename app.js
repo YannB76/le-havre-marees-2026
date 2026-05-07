@@ -9,6 +9,7 @@ const MONTHS = [
 const WEEKDAYS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const SHORT_WEEKDAYS = ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."];
 const UNKNOWN_REGULATION = "À compléter / à vérifier sur source officielle";
+const BAR_BADGE_LEVELS = [42, 50, 60, 70, 80];
 
 const fishingRegulations = {
   bar: {
@@ -134,6 +135,8 @@ const els = {
   catchPrefill: document.querySelector("#catch-prefill"),
   catchRegulationPreview: document.querySelector("#catch-regulation-preview"),
   catchStats: document.querySelector("#catch-stats"),
+  barBadgeList: document.querySelector("#bar-badge-list"),
+  barRecordLabel: document.querySelector("#bar-record-label"),
   catchList: document.querySelector("#catch-list"),
   speciesList: document.querySelector("#species-list"),
   bigTideThreshold: document.querySelector("#big-tide-threshold"),
@@ -710,6 +713,7 @@ function deleteCatch(id) {
 function renderCatchLog() {
   if (!els.catchDate.value) prefillCatchForm();
   renderCatchStats();
+  renderBarBadges();
   els.catchList.innerHTML = "";
 
   if (!state.catches.length) {
@@ -765,6 +769,37 @@ function renderCatchStats() {
     <article><span class="eyebrow">Marée fréquente</span><strong>${topTides || "-"}</strong></article>
     <article><span class="eyebrow">Meilleur coeff.</span><strong>${bestCoeff || "-"}</strong></article>
   `;
+}
+
+function renderBarBadges() {
+  const record = getBarRecord();
+  els.barRecordLabel.textContent = record ? `Record : ${formatOptionalNumber(record.sizeCm, "cm")}` : "Aucun bar enregistré";
+  els.barBadgeList.innerHTML = "";
+
+  BAR_BADGE_LEVELS.forEach((level) => {
+    const unlocked = record && record.sizeCm >= level;
+    const badge = document.createElement("article");
+    badge.className = `bar-badge ${unlocked ? "is-unlocked" : "is-locked"}`;
+    badge.innerHTML = `
+      <div class="bar-badge-medal">
+        <span class="bar-badge-crown">▲</span>
+        <span class="bar-badge-name">BAR</span>
+        <span class="bar-badge-fish" aria-hidden="true">><(((°></span>
+        <span class="bar-badge-size">${level}+</span>
+      </div>
+      <div class="bar-badge-text">
+        <strong>${unlocked ? "Badge débloqué" : "Badge verrouillé"}</strong>
+        <span>${unlocked ? `Record actuel : ${formatOptionalNumber(record.sizeCm, "cm")}` : `Ajoute un bar de ${level} cm ou plus`}</span>
+      </div>
+    `;
+    els.barBadgeList.append(badge);
+  });
+}
+
+function getBarRecord() {
+  return state.catches
+    .filter((item) => normalizeSearch(item.species).includes("bar") && Number.isFinite(item.sizeCm))
+    .sort((a, b) => b.sizeCm - a.sizeCm)[0] ?? null;
 }
 
 function renderCatchRegulationPreview() {

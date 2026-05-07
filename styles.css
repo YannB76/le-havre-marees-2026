@@ -607,6 +607,95 @@ canvas {
   gap: 10px;
 }
 
+.bar-badges-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.bar-badge-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.bar-badge {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  padding: 10px;
+  text-align: center;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.bar-badge-medal {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 132px;
+  max-width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 50% 42%, #183a59 0 54%, #0d263d 55% 72%, #d9ad55 73% 79%, transparent 80%),
+    #ffffff;
+  border-radius: 50%;
+}
+
+.bar-badge.is-locked .bar-badge-medal {
+  filter: grayscale(1);
+  opacity: 0.48;
+}
+
+.bar-badge-crown {
+  position: absolute;
+  top: 13%;
+  color: #d9ad55;
+  font-size: 1.1rem;
+}
+
+.bar-badge-name {
+  position: absolute;
+  top: 27%;
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.bar-badge-fish {
+  position: absolute;
+  top: 45%;
+  color: #dce8ed;
+  font-family: monospace;
+  font-size: 1rem;
+  transform: rotate(-9deg);
+}
+
+.bar-badge-size {
+  position: absolute;
+  bottom: 14%;
+  min-width: 74px;
+  padding: 3px 8px;
+  color: #0d263d;
+  background: linear-gradient(180deg, #f4cc73, #c9983f);
+  border-radius: 6px;
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.bar-badge-text {
+  display: grid;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.bar-badge-text strong {
+  color: var(--harbor);
+}
+
 .catch-card {
   display: grid;
   gap: 10px;
@@ -980,7 +1069,8 @@ canvas {
 
   .catch-form-grid,
   .catch-stats,
-  .catch-card-grid {
+  .catch-card-grid,
+  .bar-badge-list {
     grid-template-columns: 1fr;
   }
 
