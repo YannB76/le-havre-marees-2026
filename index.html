@@ -26,6 +26,7 @@
           <button class="view-button" type="button" data-view="moon-calendar">Calendrier lunaire</button>
           <button class="view-button" type="button" data-view="shore-fishing">🎣 Avis pêche du bord</button>
           <button class="view-button" type="button" data-view="fishing-regulations">📏 Réglementation pêche</button>
+          <button class="view-button" type="button" data-view="catch-log">📒 Carnet de prises</button>
         </nav>
       </header>
 
@@ -190,6 +191,45 @@
           </label>
 
           <div class="regulation-list" id="regulation-list"></div>
+        </section>
+
+        <section class="catch-log-panel view-panel is-hidden" id="catch-log-view" aria-labelledby="catch-log-title">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Carnet privé local</span>
+              <h2 id="catch-log-title">📒 Carnet de prises</h2>
+            </div>
+          </div>
+
+          <p class="notice">
+            Ce carnet est stocké uniquement dans ce navigateur. Il n’est ni publié, ni synchronisé, ni visible par les autres utilisateurs du site.
+          </p>
+
+          <form class="catch-form" id="catch-form">
+            <div class="catch-form-grid">
+              <label><span>Date</span><input id="catch-date" type="date" min="2026-01-01" max="2026-12-31" required></label>
+              <label><span>Heure</span><input id="catch-time" type="time" required></label>
+              <label><span>Espèce</span><input id="catch-species" type="text" list="species-list" required></label>
+              <label><span>Taille (cm)</span><input id="catch-size" type="number" min="0" step="0.1"></label>
+              <label><span>Poids (kg)</span><input id="catch-weight" type="number" min="0" step="0.01"></label>
+              <label><span>Nombre</span><input id="catch-count" type="number" min="1" step="1" value="1"></label>
+              <label><span>Lieu / poste</span><input id="catch-place" type="text"></label>
+              <label><span>Type de pêche</span><input id="catch-method" type="text"></label>
+              <label><span>Appât / leurre</span><input id="catch-bait" type="text"></label>
+              <label><span>Marée associée</span><input id="catch-tide" type="text"></label>
+              <label><span>Météo</span><input id="catch-weather" type="text"></label>
+            </div>
+            <label class="catch-comment"><span>Commentaire</span><textarea id="catch-comment" rows="3"></textarea></label>
+            <datalist id="species-list"></datalist>
+            <div class="catch-form-actions">
+              <button class="compact-button" type="submit">Ajouter la prise</button>
+              <button class="compact-button" id="catch-prefill" type="button">Préremplir avec la date</button>
+            </div>
+            <p class="catch-regulation-preview" id="catch-regulation-preview">Renseigne une espèce et une taille pour vérifier la maille si disponible.</p>
+          </form>
+
+          <div class="catch-stats" id="catch-stats"></div>
+          <div class="catch-list" id="catch-list"></div>
         </section>
 
         <aside class="week-panel" aria-labelledby="week-title">

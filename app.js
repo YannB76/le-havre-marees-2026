@@ -1,5 +1,6 @@
 const CSV_URL = "marees_le_havre_2026_evenements_COMPLET.csv";
 const ASTRONOMY_URL = "astronomie_le_havre_2026.json";
+const CATCH_LOG_STORAGE_KEY = "le-havre-marees-2026-catch-log";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MONTHS = [
   "janvier", "fevrier", "mars", "avril", "mai", "juin",
@@ -81,7 +82,8 @@ const state = {
   selectedDate: "2026-01-01",
   view: "day",
   bigTideThreshold: 95,
-  bigTideMonth: "all"
+  bigTideMonth: "all",
+  catches: []
 };
 
 const els = {
@@ -115,6 +117,25 @@ const els = {
   fishingRegulationsView: document.querySelector("#fishing-regulations-view"),
   regulationSearch: document.querySelector("#regulation-search"),
   regulationList: document.querySelector("#regulation-list"),
+  catchLogView: document.querySelector("#catch-log-view"),
+  catchForm: document.querySelector("#catch-form"),
+  catchDate: document.querySelector("#catch-date"),
+  catchTime: document.querySelector("#catch-time"),
+  catchSpecies: document.querySelector("#catch-species"),
+  catchSize: document.querySelector("#catch-size"),
+  catchWeight: document.querySelector("#catch-weight"),
+  catchCount: document.querySelector("#catch-count"),
+  catchPlace: document.querySelector("#catch-place"),
+  catchMethod: document.querySelector("#catch-method"),
+  catchBait: document.querySelector("#catch-bait"),
+  catchTide: document.querySelector("#catch-tide"),
+  catchWeather: document.querySelector("#catch-weather"),
+  catchComment: document.querySelector("#catch-comment"),
+  catchPrefill: document.querySelector("#catch-prefill"),
+  catchRegulationPreview: document.querySelector("#catch-regulation-preview"),
+  catchStats: document.querySelector("#catch-stats"),
+  catchList: document.querySelector("#catch-list"),
+  speciesList: document.querySelector("#species-list"),
   bigTideThreshold: document.querySelector("#big-tide-threshold"),
   bigTideMonth: document.querySelector("#big-tide-month"),
   bigTideList: document.querySelector("#big-tide-list"),
@@ -136,6 +157,7 @@ async function init() {
     loadData(text);
     state.astronomy = astronomy.days ?? {};
     state.moonPhases = astronomy.phases ?? [];
+    state.catches = loadCatchLog();
     setupControls();
     selectInitialDate();
     render();
@@ -209,6 +231,20 @@ function setupControls() {
   els.regulationSearch.addEventListener("input", () => {
     renderFishingRegulations();
   });
+  els.catchForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    addCatchFromForm();
+  });
+  els.catchPrefill.addEventListener("click", () => {
+    prefillCatchForm();
+  });
+  [els.catchSpecies, els.catchSize, els.catchCount, els.catchDate].forEach((input) => {
+    input.addEventListener("input", renderCatchRegulationPreview);
+  });
+  els.catchList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-delete-catch]");
+    if (button) deleteCatch(button.dataset.deleteCatch);
+  });
   els.viewButtons.forEach((button) => {
     button.addEventListener("click", () => {
       state.view = button.dataset.view;
@@ -233,6 +269,12 @@ function setupControls() {
     option.value = `2026-${String(index + 1).padStart(2, "0")}`;
     option.textContent = capitalize(month);
     els.bigTideMonth.append(option);
+  });
+
+  Object.values(fishingRegulations).forEach((item) => {
+    const option = document.createElement("option");
+    option.value = item.commonName;
+    els.speciesList.append(option);
   });
 }
 
@@ -262,6 +304,8 @@ function render() {
   renderMoonCalendar();
   renderShoreFishingAdvice();
   renderFishingRegulations();
+  renderCatchLog();
+  renderCatchRegulationPreview();
   drawChart();
 }
 
@@ -291,6 +335,7 @@ function renderView() {
   els.moonCalendarView.classList.toggle("is-hidden", state.view !== "moon-calendar");
   els.shoreFishingView.classList.toggle("is-hidden", state.view !== "shore-fishing");
   els.fishingRegulationsView.classList.toggle("is-hidden", state.view !== "fishing-regulations");
+  els.catchLogView.classList.toggle("is-hidden", state.view !== "catch-log");
   els.viewButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.view === state.view);
   });
@@ -597,6 +642,168 @@ function checkCatchRegulation(species, sizeCm, keptCountToday, date = state.sele
 }
 
 window.checkCatchRegulation = checkCatchRegulation;
+
+function loadCatchLog() {
+  try {
+    const raw = localStorage.getItem(CATCH_LOG_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveCatchLog() {
+  localStorage.setItem(CATCH_LOG_STORAGE_KEY, JSON.stringify(state.catches));
+}
+
+function prefillCatchForm() {
+  const now = new Date();
+  const selectedIsToday = toIsoDate(now) === state.selectedDate;
+  els.catchDate.value = state.selectedDate;
+  els.catchTime.value = selectedIsToday ? minutesToClock(now.getHours() * 60 + now.getMinutes()) : "";
+  els.catchTide.value = describeAssociatedTide(els.catchDate.value, els.catchTime.value);
+  renderCatchRegulationPreview();
+}
+
+function addCatchFromForm() {
+  const date = clampDate(els.catchDate.value || state.selectedDate);
+  const time = els.catchTime.value || "00:00";
+  const catchItem = {
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    date,
+    time,
+    species: els.catchSpecies.value.trim(),
+    sizeCm: numberOrNull(els.catchSize.value),
+    weightKg: numberOrNull(els.catchWeight.value),
+    count: Math.max(Number(els.catchCount.value) || 1, 1),
+    place: els.catchPlace.value.trim(),
+    method: els.catchMethod.value.trim(),
+    bait: els.catchBait.value.trim(),
+    tide: els.catchTide.value.trim() || describeAssociatedTide(date, time),
+    weather: els.catchWeather.value.trim(),
+    moonPhase: phaseForDate(date),
+    dayCoefficient: maxCoefficientForDate(date),
+    estimatedHeight: estimatedHeightForDateTime(date, time),
+    comment: els.catchComment.value.trim(),
+    createdAt: new Date().toISOString()
+  };
+
+  state.catches.unshift(catchItem);
+  saveCatchLog();
+  els.catchForm.reset();
+  els.catchCount.value = "1";
+  prefillCatchForm();
+  renderCatchLog();
+}
+
+function deleteCatch(id) {
+  const item = state.catches.find((catchItem) => catchItem.id === id);
+  if (!item) return;
+  const ok = window.confirm(`Supprimer la prise "${item.species || "sans espèce"}" du ${formatShortDate(item.date)} ?`);
+  if (!ok) return;
+  state.catches = state.catches.filter((catchItem) => catchItem.id !== id);
+  saveCatchLog();
+  renderCatchLog();
+}
+
+function renderCatchLog() {
+  if (!els.catchDate.value) prefillCatchForm();
+  renderCatchStats();
+  els.catchList.innerHTML = "";
+
+  if (!state.catches.length) {
+    els.catchList.innerHTML = `<p class="empty">Aucune prise enregistrée pour le moment.</p>`;
+    return;
+  }
+
+  state.catches
+    .slice()
+    .sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`))
+    .forEach((catchItem) => {
+      const regulation = checkCatchRegulation(catchItem.species, catchItem.sizeCm, catchItem.count, catchItem.date);
+      const card = document.createElement("article");
+      card.className = "catch-card";
+      card.innerHTML = `
+        <div class="catch-card-head">
+          <div>
+            <h3>${escapeHtml(catchItem.species || "Espèce non renseignée")}</h3>
+            <p>${formatShortDate(catchItem.date)} à ${formatTimeForText(catchItem.time)} · ${escapeHtml(catchItem.place || "Lieu non renseigné")}</p>
+          </div>
+          <button class="compact-button danger-button" type="button" data-delete-catch="${catchItem.id}">Supprimer</button>
+        </div>
+        <div class="catch-card-grid">
+          <span><strong>Taille</strong>${formatOptionalNumber(catchItem.sizeCm, "cm")}</span>
+          <span><strong>Poids</strong>${formatOptionalNumber(catchItem.weightKg, "kg")}</span>
+          <span><strong>Nombre</strong>${catchItem.count}</span>
+          <span><strong>Type</strong>${escapeHtml(catchItem.method || "-")}</span>
+          <span><strong>Appât / leurre</strong>${escapeHtml(catchItem.bait || "-")}</span>
+          <span><strong>Météo</strong>${escapeHtml(catchItem.weather || "-")}</span>
+          <span><strong>Marée</strong>${escapeHtml(catchItem.tide || "-")}</span>
+          <span><strong>Coeff.</strong>${catchItem.dayCoefficient || "-"}</span>
+          <span><strong>Hauteur estimée</strong>${catchItem.estimatedHeight ? formatHeight(catchItem.estimatedHeight) : "-"}</span>
+          <span><strong>Lune</strong>${escapeHtml(catchItem.moonPhase || "-")}</span>
+        </div>
+        <p class="catch-regulation">${escapeHtml(regulation.message)}</p>
+        ${catchItem.comment ? `<p class="catch-comment-text">${escapeHtml(catchItem.comment)}</p>` : ""}
+      `;
+      els.catchList.append(card);
+    });
+}
+
+function renderCatchStats() {
+  const totalCount = state.catches.reduce((sum, item) => sum + (Number(item.count) || 1), 0);
+  const outings = new Set(state.catches.map((item) => item.date)).size;
+  const topSpecies = topEntries(state.catches.map((item) => item.species).filter(Boolean));
+  const topTides = topEntries(state.catches.map((item) => tideKindFromText(item.tide)).filter(Boolean));
+  const bestCoeff = Math.max(...state.catches.map((item) => item.dayCoefficient || 0), 0);
+
+  els.catchStats.innerHTML = `
+    <article><span class="eyebrow">Prises</span><strong>${totalCount}</strong></article>
+    <article><span class="eyebrow">Sorties</span><strong>${outings}</strong></article>
+    <article><span class="eyebrow">Espèce fréquente</span><strong>${topSpecies || "-"}</strong></article>
+    <article><span class="eyebrow">Marée fréquente</span><strong>${topTides || "-"}</strong></article>
+    <article><span class="eyebrow">Meilleur coeff.</span><strong>${bestCoeff || "-"}</strong></article>
+  `;
+}
+
+function renderCatchRegulationPreview() {
+  const species = els.catchSpecies.value.trim();
+  if (!species) {
+    els.catchRegulationPreview.textContent = "Renseigne une espèce et une taille pour vérifier la maille si disponible.";
+    return;
+  }
+  const result = checkCatchRegulation(
+    species,
+    numberOrNull(els.catchSize.value),
+    Number(els.catchCount.value) || 1,
+    els.catchDate.value || state.selectedDate
+  );
+  els.catchRegulationPreview.textContent = result.message;
+}
+
+function describeAssociatedTide(dateString, time) {
+  const events = state.days.get(dateString) ?? [];
+  if (!events.length) return "Aucune marée disponible";
+  const minutes = time ? toMinutes(time) : 12 * 60;
+  const closest = events
+    .slice()
+    .sort((a, b) => Math.abs(a.minutes - minutes) - Math.abs(b.minutes - minutes))[0];
+  return `${closest.type} ${closest.time}${closest.coefficient ? ` · coeff. ${closest.coefficient}` : ""}`;
+}
+
+function maxCoefficientForDate(dateString) {
+  const events = state.days.get(dateString) ?? [];
+  return Math.max(...events.map((event) => event.coefficient || 0), 0);
+}
+
+function estimatedHeightForDateTime(dateString, time) {
+  if (!time) return null;
+  const dateStart = parseLocalDate(dateString).getTime();
+  const points = state.events.filter((event) => event.sortTime >= dateStart - 14 * 3600000 && event.sortTime <= dateStart + 38 * 3600000);
+  if (points.length < 2) return null;
+  return interpolateHeight(points, dateStart + toMinutes(time) * 60000);
+}
 
 function drawChart() {
   const canvas = els.chart;
@@ -973,6 +1180,41 @@ function booleanToRegulationStatus(value) {
   if (value === true) return "oui";
   if (value === false) return "non";
   return "inconnu";
+}
+
+function numberOrNull(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && value !== "" ? number : null;
+}
+
+function formatOptionalNumber(value, unit) {
+  if (!Number.isFinite(value)) return "-";
+  return `${String(value).replace(".", ",")} ${unit}`;
+}
+
+function topEntries(values) {
+  const counts = values.reduce((map, value) => {
+    map.set(value, (map.get(value) || 0) + 1);
+    return map;
+  }, new Map());
+  const best = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+  return best ? `${best[0]} (${best[1]})` : "";
+}
+
+function tideKindFromText(value) {
+  if (!value) return "";
+  if (value.includes("Pleine mer")) return "Pleine mer";
+  if (value.includes("Basse mer")) return "Basse mer";
+  return "";
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function formatLongDate(date) {
