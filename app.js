@@ -832,31 +832,31 @@ function renderBarBadgeSvg(label, className) {
         </linearGradient>
         <linearGradient id="barBadgeFish" x1="15%" y1="20%" x2="85%" y2="80%">
           <stop offset="0%" stop-color="#ffffff"/>
-          <stop offset="55%" stop-color="#d7ddd9"/>
-          <stop offset="100%" stop-color="#7d8b8f"/>
+          <stop offset="52%" stop-color="#e5e9e7"/>
+          <stop offset="100%" stop-color="#7d8d91"/>
         </linearGradient>
       </defs>
       <circle cx="120" cy="120" r="112" fill="url(#barBadgeGold)"/>
       <circle cx="120" cy="120" r="99" fill="url(#barBadgeSea)" stroke="#061525" stroke-width="2"/>
-      <path d="M105 27 118 48 133 27 139 57 101 57Z" fill="url(#barBadgeGold)"/>
-      <path d="M66 73h23M151 73h23" stroke="url(#barBadgeGold)" stroke-width="5" stroke-linecap="round"/>
-      <text x="120" y="83" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="900" fill="#f7fbff" letter-spacing="9">BAR</text>
-      <path d="M29 154c13-8 25-8 36 0s24 8 37 0M38 170c13-8 25-8 36 0s24 8 37 0" fill="none" stroke="#6d8aa0" stroke-width="5" opacity=".62"/>
-      <g transform="rotate(-13 122 126)">
-        <path d="M39 112c20-28 70-38 123-22 16 5 31 13 44 23l19-15c9 19 8 37 0 56l-20-18c-16 13-39 22-66 23-46 1-84-17-100-47Z" fill="url(#barBadgeFish)" stroke="#f8fbff" stroke-width="5" stroke-linejoin="round"/>
-        <path d="M67 96c34-10 78-10 120 11-37-3-79 4-116 17Z" fill="#52636a" opacity=".86"/>
-        <path d="M96 119c4 15 3 28-8 42l-18-33Z" fill="#e8eceb" stroke="#17314a" stroke-width="4"/>
-        <path d="M139 152c4 13 3 25-7 36l-13-30Z" fill="#8f9a9a" stroke="#17314a" stroke-width="4"/>
-        <path d="M138 90c8-17 21-24 38-27-6 13-5 22 7 28-18-4-32-3-45-1Z" fill="#f7fbff" stroke="#17314a" stroke-width="4"/>
-        <path d="M41 112c-5-14-3-27 10-39 4 19 11 29 24 34" fill="none" stroke="#f7fbff" stroke-width="8" stroke-linecap="round"/>
-        <circle cx="79" cy="93" r="9" fill="#0b2238" stroke="#f7fbff" stroke-width="4"/>
-        <path d="M91 122c-10 12-23 16-39 13" fill="none" stroke="#17314a" stroke-width="5" stroke-linecap="round"/>
-        <path d="M121 102c-2 9-5 18-11 27" fill="none" stroke="#17314a" stroke-width="4" stroke-linecap="round"/>
-        <path d="M133 108c-1 9-4 17-9 25M148 113c-1 8-3 15-7 22M163 119c-1 7-3 13-7 19" fill="none" stroke="#53656c" stroke-width="3" stroke-linecap="round"/>
+      <path d="M103 26 118 48 133 26 141 58 99 58Z" fill="url(#barBadgeGold)"/>
+      <path d="M62 70h24M154 70h24" stroke="url(#barBadgeGold)" stroke-width="5" stroke-linecap="round"/>
+      <text x="120" y="76" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="900" fill="#f7fbff" letter-spacing="8">BAR</text>
+      <path d="M30 153c13-8 25-8 38 0s26 8 40 0M38 168c13-8 25-8 38 0s26 8 40 0" fill="none" stroke="#6d8aa0" stroke-width="5" opacity=".55"/>
+      <g transform="rotate(-8 120 120)">
+        <path d="M41 121c18-28 57-43 101-38 24 3 45 12 61 26l20-15c7 18 7 35 0 52l-21-15c-18 17-44 27-75 28-40 1-74-14-86-38Z" fill="url(#barBadgeFish)" stroke="#f8fbff" stroke-width="5" stroke-linejoin="round"/>
+        <path d="M68 105c33-11 78-11 119 5-36 1-76 8-113 20Z" fill="#56656a" opacity=".86"/>
+        <path d="M127 83c8-17 23-25 45-27-10 14-9 25 4 35-18-5-34-7-49-8Z" fill="#f7fbff" stroke="#17314a" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M92 126c2 17-2 30-15 42l-15-39Z" fill="#e6e9e8" stroke="#17314a" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M146 153c3 13 1 24-9 35l-12-30Z" fill="#909b9d" stroke="#17314a" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M44 121c-7-15-5-29 8-42 4 17 12 27 25 32" fill="none" stroke="#f7fbff" stroke-width="8" stroke-linecap="round"/>
+        <circle cx="78" cy="102" r="8" fill="#0b2238" stroke="#f7fbff" stroke-width="4"/>
+        <path d="M90 128c-10 11-22 16-38 14" fill="none" stroke="#17314a" stroke-width="5" stroke-linecap="round"/>
+        <path d="M111 107c-2 13-6 25-13 36" fill="none" stroke="#17314a" stroke-width="4" stroke-linecap="round"/>
+        <path d="M126 111c-1 10-4 20-9 29M141 116c-1 9-4 18-8 26M156 123c-1 8-4 15-8 21" fill="none" stroke="#52656b" stroke-width="3" stroke-linecap="round"/>
       </g>
-      <path d="M70 177h100l18 16-16 31H68l-16-31Z" fill="url(#barBadgeGold)" stroke="#b98535" stroke-width="3" stroke-linejoin="round"/>
-      <text x="120" y="211" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="900" fill="#0b2238">${safeLabel}</text>
-      <path d="M96 224h48" stroke="#0b2238" stroke-width="4" stroke-linecap="round"/>
+      <path d="M72 177h96l20 17-17 30H69l-17-30Z" fill="url(#barBadgeGold)" stroke="#b98535" stroke-width="3" stroke-linejoin="round"/>
+      <text x="120" y="209" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="900" fill="#0b2238">${safeLabel}</text>
+      <path d="M95 223h50" stroke="#0b2238" stroke-width="4" stroke-linecap="round"/>
     </svg>
   `;
 }
