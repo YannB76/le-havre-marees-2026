@@ -136,6 +136,7 @@ const els = {
   catchPrefill: document.querySelector("#catch-prefill"),
   catchRegulationPreview: document.querySelector("#catch-regulation-preview"),
   catchStats: document.querySelector("#catch-stats"),
+  funBadgesPanel: document.querySelector("#fun-badges-panel"),
   barBadgeList: document.querySelector("#bar-badge-list"),
   barRecordLabel: document.querySelector("#bar-record-label"),
   barRecordShowcase: document.querySelector("#bar-record-showcase"),
@@ -716,6 +717,7 @@ function deleteCatch(id) {
 function renderCatchLog() {
   if (!els.catchDate.value) prefillCatchForm();
   renderCatchStats();
+  renderFunBadges();
   renderBarBadges();
   els.catchList.innerHTML = "";
 
@@ -772,6 +774,70 @@ function renderCatchStats() {
     <article><span class="eyebrow">Marée fréquente</span><strong>${topTides || "-"}</strong></article>
     <article><span class="eyebrow">Meilleur coeff.</span><strong>${bestCoeff || "-"}</strong></article>
   `;
+}
+
+function renderFunBadges() {
+  const badges = getFunBadges();
+  els.funBadgesPanel.innerHTML = "";
+  els.funBadgesPanel.classList.toggle("is-hidden", !badges.length);
+  if (!badges.length) return;
+
+  badges.forEach((badge) => {
+    const article = document.createElement("article");
+    article.className = `fun-badge ${badge.className}`;
+    article.innerHTML = `
+      <span class="fun-badge-icon">${badge.icon}</span>
+      <span class="fun-badge-copy">
+        <strong>${badge.title}</strong>
+        <span>${badge.text}</span>
+      </span>
+      <span class="fun-badge-count">${badge.count}</span>
+    `;
+    els.funBadgesPanel.append(article);
+  });
+}
+
+function getFunBadges() {
+  if (!state.catches.length) {
+    return [{
+      title: "Végan",
+      text: "Aucune prise enregistrée.",
+      count: "0",
+      icon: "🥗",
+      className: "vegan"
+    }];
+  }
+
+  const infractions = state.catches.reduce((count, catchItem) => {
+    const regulation = checkCatchRegulation(catchItem.species, catchItem.sizeCm, catchItem.count, catchItem.date);
+    const undersized = regulation.maillé === "non";
+    const quotaExceeded = regulation.quotaDépassé === "oui";
+    return count + (undersized ? 1 : 0) + (quotaExceeded ? 1 : 0);
+  }, 0);
+  const maxQuantity = Math.max(...state.catches.map((catchItem) => Number(catchItem.count) || 1), 0);
+  const badges = [];
+
+  if (infractions > 0) {
+    badges.push({
+      title: "Braco",
+      text: "Prise non maillée ou quota dépassé renseigné dans le carnet.",
+      count: infractions,
+      icon: "🚨",
+      className: "braco"
+    });
+  }
+
+  if (maxQuantity > 3) {
+    badges.push({
+      title: "Serial Killer",
+      text: "Quantité maximale déclarée sur une prise.",
+      count: maxQuantity,
+      icon: "💀",
+      className: "serial"
+    });
+  }
+
+  return badges;
 }
 
 function renderBarBadges() {
