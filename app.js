@@ -907,18 +907,17 @@ function renderBarBadgeSvg(label, className) {
       <path d="M103 26 118 48 133 26 141 58 99 58Z" fill="url(#barBadgeGold)"/>
       <path d="M62 70h24M154 70h24" stroke="url(#barBadgeGold)" stroke-width="5" stroke-linecap="round"/>
       <text x="120" y="76" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="900" fill="#f7fbff" letter-spacing="8">BAR</text>
-      <path d="M30 153c13-8 25-8 38 0s26 8 40 0M38 168c13-8 25-8 38 0s26 8 40 0" fill="none" stroke="#6d8aa0" stroke-width="5" opacity=".55"/>
-      <g transform="rotate(-8 120 120)">
-        <path d="M41 121c18-28 57-43 101-38 24 3 45 12 61 26l20-15c7 18 7 35 0 52l-21-15c-18 17-44 27-75 28-40 1-74-14-86-38Z" fill="url(#barBadgeFish)" stroke="#f8fbff" stroke-width="5" stroke-linejoin="round"/>
-        <path d="M68 105c33-11 78-11 119 5-36 1-76 8-113 20Z" fill="#56656a" opacity=".86"/>
-        <path d="M127 83c8-17 23-25 45-27-10 14-9 25 4 35-18-5-34-7-49-8Z" fill="#f7fbff" stroke="#17314a" stroke-width="4" stroke-linejoin="round"/>
-        <path d="M92 126c2 17-2 30-15 42l-15-39Z" fill="#e6e9e8" stroke="#17314a" stroke-width="4" stroke-linejoin="round"/>
-        <path d="M146 153c3 13 1 24-9 35l-12-30Z" fill="#909b9d" stroke="#17314a" stroke-width="4" stroke-linejoin="round"/>
-        <path d="M44 121c-7-15-5-29 8-42 4 17 12 27 25 32" fill="none" stroke="#f7fbff" stroke-width="8" stroke-linecap="round"/>
-        <circle cx="78" cy="102" r="8" fill="#0b2238" stroke="#f7fbff" stroke-width="4"/>
-        <path d="M90 128c-10 11-22 16-38 14" fill="none" stroke="#17314a" stroke-width="5" stroke-linecap="round"/>
-        <path d="M111 107c-2 13-6 25-13 36" fill="none" stroke="#17314a" stroke-width="4" stroke-linecap="round"/>
-        <path d="M126 111c-1 10-4 20-9 29M141 116c-1 9-4 18-8 26M156 123c-1 8-4 15-8 21" fill="none" stroke="#52656b" stroke-width="3" stroke-linecap="round"/>
+      <path d="M33 153c12-7 24-7 36 0s24 7 36 0M41 167c12-7 24-7 36 0s24 7 36 0" fill="none" stroke="#6d8aa0" stroke-width="5" opacity=".46"/>
+      <g transform="rotate(-7 120 122)">
+        <path d="M42 123c18-24 52-36 94-34 31 2 55 12 71 30l21-17c7 18 7 33 0 50l-22-17c-19 18-47 28-83 27-38-1-68-15-81-39Z" fill="url(#barBadgeFish)" stroke="#f8fbff" stroke-width="5" stroke-linejoin="round"/>
+        <path d="M69 108c35-12 78-11 119 4-37 1-74 8-111 20Z" fill="#5f6f73" opacity=".82"/>
+        <path d="M129 87c11-12 27-18 46-18-12 11-14 21-6 31-15-7-29-11-40-13Z" fill="#f7fbff" stroke="#17314a" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M92 127c0 14-5 26-17 36l-10-34Z" fill="#eef0ef" stroke="#17314a" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M144 153c1 11-3 20-11 29l-8-25Z" fill="#9aa5a6" stroke="#17314a" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M45 123c-4-13 0-25 12-35 2 14 10 23 23 28" fill="none" stroke="#f8fbff" stroke-width="8" stroke-linecap="round"/>
+        <circle cx="78" cy="106" r="7" fill="#0b2238" stroke="#f8fbff" stroke-width="4"/>
+        <path d="M89 130c-11 9-23 12-36 10" fill="none" stroke="#17314a" stroke-width="5" stroke-linecap="round"/>
+        <path d="M111 111c-1 12-4 23-9 33M128 114c-1 10-4 20-8 28M145 119c-1 9-3 17-7 24" fill="none" stroke="#52656b" stroke-width="3" stroke-linecap="round"/>
       </g>
       <path d="M72 177h96l20 17-17 30H69l-17-30Z" fill="url(#barBadgeGold)" stroke="#b98535" stroke-width="3" stroke-linejoin="round"/>
       <text x="120" y="209" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="900" fill="#0b2238">${safeLabel}</text>
