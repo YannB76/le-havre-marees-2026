@@ -314,6 +314,14 @@ canvas {
   min-width: 0;
 }
 
+.shore-fishing-panel {
+  min-width: 0;
+}
+
+.fishing-regulations-panel {
+  min-width: 0;
+}
+
 .panel-heading {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
@@ -345,6 +353,181 @@ canvas {
   background: var(--sand-soft);
   border: 1px solid #ead795;
   border-radius: 8px;
+}
+
+.shore-advice-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.shore-advice-summary article {
+  min-height: 76px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.shore-advice-summary strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--harbor);
+  font-size: 1.08rem;
+}
+
+.shore-rating {
+  width: fit-content;
+  padding: 5px 9px;
+  border-radius: 999px;
+}
+
+.shore-rating.low {
+  color: #5f3b26;
+  background: #f3e2d6;
+}
+
+.shore-rating.medium {
+  color: #6f4b0b;
+  background: #fff1be;
+}
+
+.shore-rating.good {
+  color: var(--teal-dark);
+  background: #dff5ef;
+}
+
+.shore-rating.very-good {
+  color: #ffffff;
+  background: var(--danger);
+}
+
+.shore-window-list {
+  display: grid;
+  gap: 10px;
+}
+
+.shore-window-card {
+  display: grid;
+  gap: 5px;
+  padding: 12px 14px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--teal);
+  border-radius: 8px;
+}
+
+.shore-window-card.is-low {
+  border-left-color: #d88416;
+  background: var(--sand-soft);
+}
+
+.shore-window-title {
+  color: var(--harbor);
+  font-size: 1.08rem;
+  font-weight: 700;
+}
+
+.shore-safety {
+  margin-top: 12px;
+  padding: 12px 14px;
+  color: #73321f;
+  background: #fff3ed;
+  border: 1px solid #f0c1b2;
+  border-radius: 8px;
+}
+
+.regulation-warning {
+  margin: 12px 0;
+  padding: 12px 14px;
+  color: #73321f;
+  background: #fff3ed;
+  border: 1px solid #f0c1b2;
+  border-radius: 8px;
+}
+
+.regulation-search {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.regulation-search input {
+  width: min(100%, 420px);
+}
+
+.regulation-list {
+  display: grid;
+  gap: 12px;
+}
+
+.regulation-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.regulation-card-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.regulation-card h3 {
+  margin: 0;
+  color: var(--harbor);
+  font-size: 1.35rem;
+}
+
+.regulation-card-head p,
+.regulation-card-head span,
+.regulation-source {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.regulation-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.regulation-facts div {
+  padding: 9px 10px;
+  background: var(--foam);
+  border: 1px solid #e5ebf5;
+  border-radius: 8px;
+}
+
+.regulation-facts dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.regulation-facts dd {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.regulation-comment {
+  color: var(--ink);
+}
+
+.regulation-source a {
+  color: var(--teal-dark);
+  font-weight: 700;
 }
 
 .big-tide-list {
@@ -604,9 +787,29 @@ canvas {
     order: 1;
   }
 
+  .shore-fishing-panel {
+    order: 1;
+  }
+
+  .fishing-regulations-panel {
+    order: 1;
+  }
+
   .panel-heading,
   .big-tide-card {
     grid-template-columns: 1fr;
+  }
+
+  .shore-advice-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .regulation-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .regulation-card-head {
+    display: grid;
   }
 
   .big-tide-card {

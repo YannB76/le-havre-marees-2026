@@ -7,6 +7,71 @@ const MONTHS = [
 ];
 const WEEKDAYS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const SHORT_WEEKDAYS = ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."];
+const UNKNOWN_REGULATION = "À compléter / à vérifier sur source officielle";
+
+const fishingRegulations = {
+  bar: {
+    commonName: "Bar",
+    scientificName: "Dicentrarchus labrax",
+    minSizeCm: 42,
+    dailyLimit: 3,
+    period: "Pêche autorisée du 1er avril au 31 janvier au nord du 48e parallèle. No-kill uniquement du 1er février au 31 mars.",
+    noKill: "Obligatoire du 1er février au 31 mars ; autorisé hors période de conservation.",
+    markingRequired: "À vérifier sur source officielle",
+    recFishing: "Oui",
+    comment: "Nord du 48e parallèle : 3 individus maximum par pêcheur et par jour. Filets fixes interdits pour le bar. Données 2026 à vérifier avant sortie.",
+    source: "DIRM Manche Est - Mer du Nord",
+    sourceUrl: "https://www.dirm.memn.developpement-durable.gouv.fr/bar-et-lieu-jaune-regles-applicables-en-2026-pour-a1334.html",
+    lastChecked: "2026-05-05",
+    rules: {
+      minSizeCm: 42,
+      dailyLimit: 3,
+      recFishing: true,
+      allowedRanges: [{ start: "04-01", end: "12-31" }, { start: "01-01", end: "01-31" }],
+      noKillRanges: [{ start: "02-01", end: "03-31" }]
+    }
+  },
+  lieuJaune: {
+    commonName: "Lieu jaune",
+    scientificName: "Pollachius pollachius",
+    minSizeCm: 42,
+    dailyLimit: 2,
+    period: "Capture et détention interdites du 1er janvier au 30 avril. Pêche autorisée du 1er mai au 31 décembre.",
+    noKill: "Pêcher-relâcher interdit.",
+    markingRequired: "À vérifier sur source officielle",
+    recFishing: "Oui",
+    comment: "2 individus maximum par pêcheur et par jour. Données 2026 à vérifier avant sortie.",
+    source: "DIRM Manche Est - Mer du Nord",
+    sourceUrl: "https://www.dirm.memn.developpement-durable.gouv.fr/bar-et-lieu-jaune-regles-applicables-en-2026-pour-a1334.html",
+    lastChecked: "2026-05-05",
+    rules: {
+      minSizeCm: 42,
+      dailyLimit: 2,
+      recFishing: true,
+      allowedRanges: [{ start: "05-01", end: "12-31" }]
+    }
+  },
+  maquereau: officialSizeRegulation("Maquereau", "Scomber spp.", 20, "Taille minimale Mer du Nord, Manche, Atlantique : 20 cm. Attention : ligne spécifique Mer du Nord à 30 cm dans l'arrêté."),
+  doradeGrise: officialSizeRegulation("Dorade grise", "Spondyliosoma cantharus", 23),
+  doradeRoyale: officialSizeRegulation("Dorade royale", "Sparus aurata", 23),
+  sole: officialSizeRegulation("Sole", "Solea spp.", 25),
+  limande: officialSizeRegulation("Limande", "Limanda limanda", 20),
+  plieCarrelet: officialSizeRegulation("Plie / carrelet", "Pleuronectes platessa", 27),
+  turbot: officialSizeRegulation("Turbot", "Psetta maxima", 30),
+  congre: officialSizeRegulation("Congre", "Conger conger", 60),
+  vieille: regulationToVerify("Vieille", "Labrus bergylta"),
+  merlan: officialSizeRegulation("Merlan", "Merlangius merlangus", 27),
+  mulet: officialSizeRegulation("Mulet", "Mugil spp.", 30),
+  orphie: officialSizeRegulation("Orphie", "Belone spp.", 30),
+  roussette: regulationToVerify("Roussette", null),
+  raie: officialSizeRegulation("Raie", "Rajiformes", 45, "Taille minimale générale Rajiformes : 45 cm. Raie brunette : 78 cm. Espèce exacte à vérifier avant conservation."),
+  seiche: regulationToVerify("Seiche", "Sepia officinalis"),
+  encornet: regulationToVerify("Encornet", null),
+  tourteau: officialSizeRegulation("Tourteau", "Cancer pagurus", 15, "Taille minimale au nord du 48e parallèle Nord : 15 cm. Au sud : 13 cm."),
+  etrille: officialSizeRegulation("Étrille", "Polybius henslowi / Necora puber", 6.5),
+  homard: officialSizeRegulation("Homard", "Homarus gammarus", 9, "Taille minimale : 9 cm de longueur céphalothoracique (LC)."),
+  coquilleSaintJacques: officialSizeRegulation("Coquille Saint-Jacques", "Pecten maximus", 11)
+};
 
 const state = {
   events: [],
@@ -42,6 +107,14 @@ const els = {
   dayView: document.querySelector("#day-view"),
   bigTidesView: document.querySelector("#big-tides-view"),
   moonCalendarView: document.querySelector("#moon-calendar-view"),
+  shoreFishingView: document.querySelector("#shore-fishing-view"),
+  shoreFishingDate: document.querySelector("#shore-fishing-date"),
+  shoreFishingRating: document.querySelector("#shore-fishing-rating"),
+  shoreFishingCoeff: document.querySelector("#shore-fishing-coeff"),
+  shoreFishingWindows: document.querySelector("#shore-fishing-windows"),
+  fishingRegulationsView: document.querySelector("#fishing-regulations-view"),
+  regulationSearch: document.querySelector("#regulation-search"),
+  regulationList: document.querySelector("#regulation-list"),
   bigTideThreshold: document.querySelector("#big-tide-threshold"),
   bigTideMonth: document.querySelector("#big-tide-month"),
   bigTideList: document.querySelector("#big-tide-list"),
@@ -133,6 +206,9 @@ function setupControls() {
     state.bigTideMonth = els.bigTideMonth.value;
     renderBigTides();
   });
+  els.regulationSearch.addEventListener("input", () => {
+    renderFishingRegulations();
+  });
   els.viewButtons.forEach((button) => {
     button.addEventListener("click", () => {
       state.view = button.dataset.view;
@@ -162,6 +238,7 @@ function setupControls() {
 
 function selectInitialDate() {
   state.selectedDate = dateInside2026(new Date());
+  state.bigTideMonth = state.selectedDate.slice(0, 7);
 }
 
 function render() {
@@ -183,6 +260,8 @@ function render() {
   renderDayList(monthKey);
   renderBigTides();
   renderMoonCalendar();
+  renderShoreFishingAdvice();
+  renderFishingRegulations();
   drawChart();
 }
 
@@ -210,6 +289,8 @@ function renderView() {
   els.dayView.classList.toggle("is-hidden", state.view !== "day");
   els.bigTidesView.classList.toggle("is-hidden", state.view !== "big-tides");
   els.moonCalendarView.classList.toggle("is-hidden", state.view !== "moon-calendar");
+  els.shoreFishingView.classList.toggle("is-hidden", state.view !== "shore-fishing");
+  els.fishingRegulationsView.classList.toggle("is-hidden", state.view !== "fishing-regulations");
   els.viewButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.view === state.view);
   });
@@ -349,6 +430,173 @@ function renderMoonCalendar() {
     els.moonCalendarGrid.append(card);
   });
 }
+
+function renderShoreFishingAdvice() {
+  const events = state.days.get(state.selectedDate) ?? [];
+  const date = parseLocalDate(state.selectedDate);
+  const score = getFishingScoreForDay(events);
+  const windows = getRecommendedFishingWindows(events, score);
+
+  els.shoreFishingDate.textContent = formatLongDate(date);
+  els.shoreFishingRating.textContent = score.label;
+  els.shoreFishingRating.className = `shore-rating ${score.level}`;
+  els.shoreFishingCoeff.textContent = score.maxCoeff ? String(score.maxCoeff) : "Non disponible";
+  els.shoreFishingWindows.innerHTML = "";
+
+  if (!events.length) {
+    els.shoreFishingWindows.innerHTML = `<p class="empty">Aucune donnée de marée disponible pour cette date.</p>`;
+    return;
+  }
+
+  windows.forEach((windowItem) => {
+    const card = document.createElement("article");
+    card.className = `shore-window-card ${windowItem.event.type === "Pleine mer" ? "is-high" : "is-low"}`;
+    card.innerHTML = formatFishingWindow(windowItem);
+    els.shoreFishingWindows.append(card);
+  });
+}
+
+function getFishingScoreForDay(events) {
+  const maxCoeff = Math.max(...events.map((event) => event.coefficient || 0), 0);
+  if (maxCoeff < 50) {
+    return {
+      maxCoeff,
+      label: "Peu favorable",
+      level: "low",
+      advice: "peu favorable, courant souvent plus faible"
+    };
+  }
+  if (maxCoeff < 70) {
+    return {
+      maxCoeff,
+      label: "Moyen",
+      level: "medium",
+      advice: "moyen, à adapter selon la météo et le poste"
+    };
+  }
+  if (maxCoeff < 90) {
+    return {
+      maxCoeff,
+      label: "Favorable",
+      level: "good",
+      advice: "favorable, courant intéressant autour des changements de marée"
+    };
+  }
+  return {
+    maxCoeff,
+    label: "Très favorable",
+    level: "very-good",
+    advice: "très favorable, mer puissante, prudence"
+  };
+}
+
+function getRecommendedFishingWindows(events, score) {
+  return events.map((event) => {
+    const isHigh = event.type === "Pleine mer";
+    const startOffset = isHigh ? -120 : -60;
+    const endOffset = 60;
+    return {
+      event,
+      start: minutesToClock(event.minutes + startOffset),
+      end: minutesToClock(event.minutes + endOffset),
+      advice: isHigh
+        ? score.advice
+        : "intéressant pour repérer les zones, attention au retour de la mer"
+    };
+  });
+}
+
+function formatFishingWindow(windowItem) {
+  const event = windowItem.event;
+  const isHigh = event.type === "Pleine mer";
+  const icon = isHigh ? "🌊" : "🏖️";
+  return `
+    <span class="shore-window-title">${icon} ${event.type} à ${formatTimeForText(event.time)}</span>
+    <span><strong>Créneau conseillé :</strong> ${formatTimeForText(windowItem.start)} – ${formatTimeForText(windowItem.end)}</span>
+    <span><strong>Hauteur :</strong> ${formatHeight(event.height)}</span>
+    ${event.coefficient ? `<span><strong>Coefficient :</strong> ${event.coefficient}</span>` : ""}
+    <span><strong>Avis :</strong> ${windowItem.advice}</span>
+  `;
+}
+
+function renderFishingRegulations() {
+  const query = normalizeSearch(els.regulationSearch.value);
+  const items = Object.entries(fishingRegulations)
+    .filter(([, item]) => {
+      const haystack = normalizeSearch(`${item.commonName} ${item.scientificName ?? ""}`);
+      return !query || haystack.includes(query);
+    });
+
+  els.regulationList.innerHTML = "";
+  if (!items.length) {
+    els.regulationList.innerHTML = `<p class="empty">Aucune espèce trouvée pour cette recherche.</p>`;
+    return;
+  }
+
+  items.forEach(([key, item]) => {
+    const card = document.createElement("article");
+    card.className = "regulation-card";
+    card.innerHTML = `
+      <div class="regulation-card-head">
+        <div>
+          <h3>${item.commonName}</h3>
+          <p>${displayRegulationValue(item.scientificName)}</p>
+        </div>
+        <span>${item.lastChecked}</span>
+      </div>
+      <dl class="regulation-facts">
+        <div><dt>Taille minimale</dt><dd>${formatRegulationSize(item.minSizeCm)}</dd></div>
+        <div><dt>Quota / jour</dt><dd>${formatRegulationLimit(item.dailyLimit)}</dd></div>
+        <div><dt>Période</dt><dd>${displayRegulationValue(item.period)}</dd></div>
+        <div><dt>No-kill</dt><dd>${displayRegulationValue(item.noKill)}</dd></div>
+        <div><dt>Marquage obligatoire</dt><dd>${displayRegulationValue(item.markingRequired)}</dd></div>
+        <div><dt>Déclaration RecFishing</dt><dd>${displayRegulationValue(item.recFishing)}</dd></div>
+      </dl>
+      <p class="regulation-comment">${displayRegulationValue(item.comment)}</p>
+      <p class="regulation-source"><strong>Source officielle :</strong> ${formatRegulationSource(item)}</p>
+    `;
+    card.dataset.species = key;
+    els.regulationList.append(card);
+  });
+}
+
+function checkCatchRegulation(species, sizeCm, keptCountToday, date = state.selectedDate) {
+  const item = findRegulationBySpecies(species);
+  if (!item || !item.rules) {
+    return {
+      maillé: "inconnu",
+      quotaDépassé: "inconnu",
+      périodeAutorisée: "inconnu",
+      message: "⚠️ Réglementation à vérifier sur source officielle"
+    };
+  }
+
+  const sized = checkMinSize(item.rules, Number(sizeCm));
+  const quota = checkDailyLimit(item.rules, Number(keptCountToday));
+  const period = checkAllowedPeriod(item.rules, date);
+  const messages = [];
+
+  if (sized === true) messages.push("✅ Capture maillée");
+  else if (sized === false) messages.push("❌ Poisson non maillé : à relâcher");
+  else messages.push("⚠️ Taille minimale à vérifier");
+
+  if (quota === true) messages.push("❌ Quota journalier dépassé");
+  else if (quota === null) messages.push("⚠️ Quota journalier à vérifier");
+
+  if (period === false) messages.push("❌ Période de conservation non autorisée");
+  else if (period === null) messages.push("⚠️ Période autorisée à vérifier");
+
+  if (item.rules.recFishing) messages.push("📲 Déclaration RecFishing potentiellement nécessaire");
+
+  return {
+    maillé: booleanToRegulationStatus(sized),
+    quotaDépassé: booleanToRegulationStatus(quota),
+    périodeAutorisée: booleanToRegulationStatus(period),
+    message: messages.join(" · ")
+  };
+}
+
+window.checkCatchRegulation = checkCatchRegulation;
 
 function drawChart() {
   const canvas = els.chart;
@@ -617,6 +865,114 @@ function toIsoDate(date) {
 function toMinutes(time) {
   const [hours, minutes] = time.split(":").map(Number);
   return hours * 60 + minutes;
+}
+
+function minutesToClock(minutes) {
+  const safeMinutes = (minutes + 24 * 60) % (24 * 60);
+  const hours = Math.floor(safeMinutes / 60);
+  const mins = safeMinutes % 60;
+  return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+}
+
+function formatTimeForText(time) {
+  return time.replace(":", "h");
+}
+
+function regulationToVerify(commonName, scientificName) {
+  return {
+    commonName,
+    scientificName,
+    minSizeCm: null,
+    dailyLimit: null,
+    period: UNKNOWN_REGULATION,
+    noKill: UNKNOWN_REGULATION,
+    markingRequired: "Inconnu",
+    recFishing: "À vérifier",
+    comment: UNKNOWN_REGULATION,
+    source: "À vérifier sur source officielle",
+    sourceUrl: "",
+    lastChecked: "2026-05-05"
+  };
+}
+
+function officialSizeRegulation(commonName, scientificName, minSizeCm, comment = "Taille minimale officielle trouvée. Quotas, périodes, marquage et déclarations restent à vérifier selon zone et mode de pêche.") {
+  return {
+    commonName,
+    scientificName,
+    minSizeCm,
+    dailyLimit: null,
+    period: "À vérifier sur source officielle",
+    noKill: "À vérifier sur source officielle",
+    markingRequired: "À vérifier",
+    recFishing: "À vérifier",
+    comment,
+    source: "Légifrance - tailles minimales de capture",
+    sourceUrl: "https://www.legifrance.gouv.fr/loda/id/LEGISCTA000026582654/",
+    lastChecked: "2026-05-05",
+    rules: {
+      minSizeCm
+    }
+  };
+}
+
+function displayRegulationValue(value) {
+  if (value === null || value === undefined || value === "") return "À vérifier sur source officielle";
+  return value;
+}
+
+function formatRegulationSize(value) {
+  return Number.isFinite(value) ? `${value} cm` : "À vérifier sur source officielle";
+}
+
+function formatRegulationLimit(value) {
+  return Number.isFinite(value) ? `${value} / pêcheur / jour` : "À vérifier sur source officielle";
+}
+
+function formatRegulationSource(item) {
+  if (!item.sourceUrl) return displayRegulationValue(item.source);
+  return `<a href="${item.sourceUrl}" target="_blank" rel="noopener noreferrer">${item.source}</a>`;
+}
+
+function normalizeSearch(value) {
+  return String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function findRegulationBySpecies(species) {
+  const key = normalizeSearch(species);
+  return Object.values(fishingRegulations).find((item) => {
+    return normalizeSearch(item.commonName) === key || normalizeSearch(item.scientificName ?? "") === key;
+  });
+}
+
+function checkMinSize(rules, sizeCm) {
+  if (!Number.isFinite(rules.minSizeCm) || !Number.isFinite(sizeCm)) return null;
+  return sizeCm >= rules.minSizeCm;
+}
+
+function checkDailyLimit(rules, keptCountToday) {
+  if (!Number.isFinite(rules.dailyLimit) || !Number.isFinite(keptCountToday)) return null;
+  return keptCountToday > rules.dailyLimit;
+}
+
+function checkAllowedPeriod(rules, dateString) {
+  if (!rules.allowedRanges) return null;
+  const monthDay = dateString.slice(5, 10);
+  return rules.allowedRanges.some((range) => monthDayIsInsideRange(monthDay, range.start, range.end));
+}
+
+function monthDayIsInsideRange(monthDay, start, end) {
+  if (start <= end) return monthDay >= start && monthDay <= end;
+  return monthDay >= start || monthDay <= end;
+}
+
+function booleanToRegulationStatus(value) {
+  if (value === true) return "oui";
+  if (value === false) return "non";
+  return "inconnu";
 }
 
 function formatLongDate(date) {

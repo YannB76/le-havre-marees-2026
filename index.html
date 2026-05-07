@@ -24,6 +24,8 @@
           <button class="view-button is-active" type="button" data-view="day">Aujourd'hui</button>
           <button class="view-button" type="button" data-view="big-tides">Grosses marées</button>
           <button class="view-button" type="button" data-view="moon-calendar">Calendrier lunaire</button>
+          <button class="view-button" type="button" data-view="shore-fishing">🎣 Avis pêche du bord</button>
+          <button class="view-button" type="button" data-view="fishing-regulations">📏 Réglementation pêche</button>
         </nav>
       </header>
 
@@ -45,6 +47,14 @@
             </label>
             <button class="compact-button" id="today-button" type="button">Aujourd'hui</button>
           </div>
+
+          <section class="chart-panel" aria-label="Marégramme du jour">
+            <div class="chart-title">
+              <span>Courbe estimative de la journée</span>
+              <span id="range-label"></span>
+            </div>
+            <canvas id="tide-chart" width="740" height="500"></canvas>
+          </section>
 
           <section class="astro-panel" aria-label="Soleil et lune">
             <article>
@@ -91,13 +101,6 @@
             </table>
           </div>
 
-          <section class="chart-panel" aria-label="Marégramme du jour">
-            <div class="chart-title">
-              <span>Courbe estimative de la journée</span>
-              <span id="range-label"></span>
-            </div>
-            <canvas id="tide-chart" width="740" height="500"></canvas>
-          </section>
         </section>
 
         <section class="big-tides-panel view-panel is-hidden" id="big-tides-view" aria-labelledby="big-tides-title">
@@ -133,6 +136,60 @@
             </div>
           </div>
           <div class="moon-calendar-grid" id="moon-calendar-grid"></div>
+        </section>
+
+        <section class="shore-fishing-panel view-panel is-hidden" id="shore-fishing-view" aria-labelledby="shore-fishing-title">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Avis indicatif</span>
+              <h2 id="shore-fishing-title">🎣 Avis pêche du bord — Le Havre</h2>
+            </div>
+          </div>
+
+          <div class="shore-advice-summary">
+            <article>
+              <span class="eyebrow">Date analysée</span>
+              <strong id="shore-fishing-date">-</strong>
+            </article>
+            <article>
+              <span class="eyebrow">Résumé rapide</span>
+              <strong id="shore-fishing-rating">-</strong>
+            </article>
+            <article>
+              <span class="eyebrow">Coefficient max</span>
+              <strong id="shore-fishing-coeff">-</strong>
+            </article>
+          </div>
+
+          <p class="notice">
+            Pour la pêche du bord, les moments autour de la pleine mer sont souvent intéressants, surtout lorsque le courant se met en mouvement. Les basses mers peuvent aussi aider à repérer les postes, les rochers, les trous et les zones découvertes.
+          </p>
+
+          <div class="shore-window-list" id="shore-fishing-windows"></div>
+
+          <p class="shore-safety">
+            Cet avis est indicatif. Vérifie toujours la météo, le vent, la houle, les horaires officiels et les conditions locales avant de partir. Ne prends pas de risque avec le retour de la mer.
+          </p>
+        </section>
+
+        <section class="fishing-regulations-panel view-panel is-hidden" id="fishing-regulations-view" aria-labelledby="fishing-regulations-title">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Réglementation indicative</span>
+              <h2 id="fishing-regulations-title">📏 Réglementation pêche</h2>
+            </div>
+          </div>
+
+          <p class="regulation-warning">
+            Les informations de réglementation sont données à titre indicatif. La réglementation peut changer selon l’année, la zone, l’espèce, la période et le mode de pêche. Vérifie toujours les sources officielles avant de conserver une capture.
+          </p>
+
+          <label class="regulation-search">
+            <span>Rechercher une espèce</span>
+            <input id="regulation-search" type="search" placeholder="Bar, maquereau, homard...">
+          </label>
+
+          <div class="regulation-list" id="regulation-list"></div>
         </section>
 
         <aside class="week-panel" aria-labelledby="week-title">
