@@ -753,7 +753,19 @@ canvas {
   }
 
   .view-menu {
+    flex-wrap: nowrap;
     justify-content: start;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .view-button {
+    flex: 0 0 auto;
+    min-width: max-content;
+    min-height: 44px;
+    white-space: nowrap;
   }
 
   main {
