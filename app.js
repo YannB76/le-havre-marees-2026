@@ -137,6 +137,7 @@ const els = {
   catchStats: document.querySelector("#catch-stats"),
   barBadgeList: document.querySelector("#bar-badge-list"),
   barRecordLabel: document.querySelector("#bar-record-label"),
+  barRecordShowcase: document.querySelector("#bar-record-showcase"),
   catchList: document.querySelector("#catch-list"),
   speciesList: document.querySelector("#species-list"),
   bigTideThreshold: document.querySelector("#big-tide-threshold"),
@@ -774,6 +775,31 @@ function renderCatchStats() {
 function renderBarBadges() {
   const record = getBarRecord();
   els.barRecordLabel.textContent = record ? `Record : ${formatOptionalNumber(record.sizeCm, "cm")}` : "Aucun bar enregistré";
+  els.barRecordShowcase.innerHTML = record ? `
+    <div class="bar-record-medal">
+      <span class="bar-badge-crown">▲</span>
+      <span class="bar-badge-name">BAR</span>
+      <span class="bar-badge-fish" aria-hidden="true">><(((°></span>
+      <span class="bar-badge-size">${Math.floor(record.sizeCm)} cm</span>
+    </div>
+    <div class="bar-record-copy">
+      <span class="eyebrow">Badge record personnel</span>
+      <strong>${formatOptionalNumber(record.sizeCm, "cm")}</strong>
+      <span>${formatShortDate(record.date)} · ${formatTimeForText(record.time)}${record.place ? ` · ${escapeHtml(record.place)}` : ""}</span>
+    </div>
+  ` : `
+    <div class="bar-record-medal is-empty">
+      <span class="bar-badge-crown">▲</span>
+      <span class="bar-badge-name">BAR</span>
+      <span class="bar-badge-fish" aria-hidden="true">><(((°></span>
+      <span class="bar-badge-size">--</span>
+    </div>
+    <div class="bar-record-copy">
+      <span class="eyebrow">Badge record personnel</span>
+      <strong>Aucun bar</strong>
+      <span>Ajoute une prise de bar avec une taille pour débloquer le badge.</span>
+    </div>
+  `;
   els.barBadgeList.innerHTML = "";
 
   BAR_BADGE_LEVELS.forEach((level) => {
