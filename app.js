@@ -778,24 +778,14 @@ function renderBarBadges() {
   const record = getBarRecord();
   els.barRecordLabel.textContent = record ? `Record : ${formatOptionalNumber(record.sizeCm, "cm")}` : "Aucun bar enregistré";
   els.barRecordShowcase.innerHTML = record ? `
-    <div class="bar-record-medal">
-      <span class="bar-badge-crown">▲</span>
-      <span class="bar-badge-name">BAR</span>
-      <span class="bar-badge-fish" aria-hidden="true">><(((°></span>
-      <span class="bar-badge-size">${Math.floor(record.sizeCm)} cm</span>
-    </div>
+    ${renderBarBadgeSvg(`${Math.floor(record.sizeCm)} cm`, "bar-record-medal")}
     <div class="bar-record-copy">
       <span class="eyebrow">Badge record personnel</span>
       <strong>${formatOptionalNumber(record.sizeCm, "cm")}</strong>
       <span>${formatShortDate(record.date)} · ${formatTimeForText(record.time)}${record.place ? ` · ${escapeHtml(record.place)}` : ""}</span>
     </div>
   ` : `
-    <div class="bar-record-medal is-empty">
-      <span class="bar-badge-crown">▲</span>
-      <span class="bar-badge-name">BAR</span>
-      <span class="bar-badge-fish" aria-hidden="true">><(((°></span>
-      <span class="bar-badge-size">--</span>
-    </div>
+    ${renderBarBadgeSvg("--", "bar-record-medal is-empty")}
     <div class="bar-record-copy">
       <span class="eyebrow">Badge record personnel</span>
       <strong>Aucun bar</strong>
@@ -809,12 +799,7 @@ function renderBarBadges() {
     const badge = document.createElement("article");
     badge.className = `bar-badge ${unlocked ? "is-unlocked" : "is-locked"}`;
     badge.innerHTML = `
-      <div class="bar-badge-medal">
-        <span class="bar-badge-crown">▲</span>
-        <span class="bar-badge-name">BAR</span>
-        <span class="bar-badge-fish" aria-hidden="true">><(((°></span>
-        <span class="bar-badge-size">${level}+</span>
-      </div>
+      ${renderBarBadgeSvg(`${level}+`, "bar-badge-medal")}
       <div class="bar-badge-text">
         <strong>${unlocked ? "Badge débloqué" : "Badge verrouillé"}</strong>
         <span>${unlocked ? `Record actuel : ${formatOptionalNumber(record.sizeCm, "cm")}` : `Ajoute un bar de ${level} cm ou plus`}</span>
@@ -828,6 +813,52 @@ function getBarRecord() {
   return state.catches
     .filter((item) => normalizeSearch(item.species).includes("bar") && Number.isFinite(item.sizeCm))
     .sort((a, b) => b.sizeCm - a.sizeCm)[0] ?? null;
+}
+
+function renderBarBadgeSvg(label, className) {
+  const safeLabel = escapeHtml(label);
+  return `
+    <svg class="${className}" viewBox="0 0 240 240" role="img" aria-label="Badge bar ${safeLabel}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="barBadgeSea" cx="48%" cy="34%" r="72%">
+          <stop offset="0%" stop-color="#183f61"/>
+          <stop offset="74%" stop-color="#0b2238"/>
+          <stop offset="100%" stop-color="#071827"/>
+        </radialGradient>
+        <linearGradient id="barBadgeGold" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#f7d98b"/>
+          <stop offset="48%" stop-color="#d1a34e"/>
+          <stop offset="100%" stop-color="#a8782f"/>
+        </linearGradient>
+        <linearGradient id="barBadgeFish" x1="15%" y1="20%" x2="85%" y2="80%">
+          <stop offset="0%" stop-color="#ffffff"/>
+          <stop offset="55%" stop-color="#d7ddd9"/>
+          <stop offset="100%" stop-color="#7d8b8f"/>
+        </linearGradient>
+      </defs>
+      <circle cx="120" cy="120" r="112" fill="url(#barBadgeGold)"/>
+      <circle cx="120" cy="120" r="99" fill="url(#barBadgeSea)" stroke="#061525" stroke-width="2"/>
+      <path d="M105 27 118 48 133 27 139 57 101 57Z" fill="url(#barBadgeGold)"/>
+      <path d="M66 73h23M151 73h23" stroke="url(#barBadgeGold)" stroke-width="5" stroke-linecap="round"/>
+      <text x="120" y="83" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="900" fill="#f7fbff" letter-spacing="9">BAR</text>
+      <path d="M29 154c13-8 25-8 36 0s24 8 37 0M38 170c13-8 25-8 36 0s24 8 37 0" fill="none" stroke="#6d8aa0" stroke-width="5" opacity=".62"/>
+      <g transform="rotate(-13 122 126)">
+        <path d="M39 112c20-28 70-38 123-22 16 5 31 13 44 23l19-15c9 19 8 37 0 56l-20-18c-16 13-39 22-66 23-46 1-84-17-100-47Z" fill="url(#barBadgeFish)" stroke="#f8fbff" stroke-width="5" stroke-linejoin="round"/>
+        <path d="M67 96c34-10 78-10 120 11-37-3-79 4-116 17Z" fill="#52636a" opacity=".86"/>
+        <path d="M96 119c4 15 3 28-8 42l-18-33Z" fill="#e8eceb" stroke="#17314a" stroke-width="4"/>
+        <path d="M139 152c4 13 3 25-7 36l-13-30Z" fill="#8f9a9a" stroke="#17314a" stroke-width="4"/>
+        <path d="M138 90c8-17 21-24 38-27-6 13-5 22 7 28-18-4-32-3-45-1Z" fill="#f7fbff" stroke="#17314a" stroke-width="4"/>
+        <path d="M41 112c-5-14-3-27 10-39 4 19 11 29 24 34" fill="none" stroke="#f7fbff" stroke-width="8" stroke-linecap="round"/>
+        <circle cx="79" cy="93" r="9" fill="#0b2238" stroke="#f7fbff" stroke-width="4"/>
+        <path d="M91 122c-10 12-23 16-39 13" fill="none" stroke="#17314a" stroke-width="5" stroke-linecap="round"/>
+        <path d="M121 102c-2 9-5 18-11 27" fill="none" stroke="#17314a" stroke-width="4" stroke-linecap="round"/>
+        <path d="M133 108c-1 9-4 17-9 25M148 113c-1 8-3 15-7 22M163 119c-1 7-3 13-7 19" fill="none" stroke="#53656c" stroke-width="3" stroke-linecap="round"/>
+      </g>
+      <path d="M70 177h100l18 16-16 31H68l-16-31Z" fill="url(#barBadgeGold)" stroke="#b98535" stroke-width="3" stroke-linejoin="round"/>
+      <text x="120" y="211" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="900" fill="#0b2238">${safeLabel}</text>
+      <path d="M96 224h48" stroke="#0b2238" stroke-width="4" stroke-linecap="round"/>
+    </svg>
+  `;
 }
 
 function renderCatchRegulationPreview() {

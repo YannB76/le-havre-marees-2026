@@ -631,8 +631,7 @@ canvas {
 
 .bar-record-medal {
   position: relative;
-  display: grid;
-  place-items: center;
+  display: block;
   width: 168px;
   max-width: 100%;
   aspect-ratio: 1;
@@ -686,8 +685,7 @@ canvas {
 
 .bar-badge-medal {
   position: relative;
-  display: grid;
-  place-items: center;
+  display: block;
   width: 132px;
   max-width: 100%;
   aspect-ratio: 1;
