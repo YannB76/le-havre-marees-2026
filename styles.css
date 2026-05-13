@@ -233,6 +233,46 @@ select {
   font-size: 1.05rem;
 }
 
+.weather-panel {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 12px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.weather-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.weather-grid article {
+  min-height: 70px;
+  padding: 10px 12px;
+  background: var(--foam);
+  border: 1px solid #e5ebf5;
+  border-radius: 8px;
+}
+
+.weather-grid strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--harbor);
+  font-size: 1.05rem;
+}
+
+.weather-advice {
+  margin: 0;
+  padding: 10px 12px;
+  color: var(--teal-dark);
+  background: var(--sand-soft);
+  border: 1px solid #ead795;
+  border-radius: 8px;
+}
+
 .summary-grid article {
   min-height: 76px;
   padding: 10px 12px;
@@ -319,6 +359,10 @@ canvas {
 }
 
 .moon-calendar-panel {
+  min-width: 0;
+}
+
+.weather-dashboard {
   min-width: 0;
 }
 
@@ -954,6 +998,23 @@ canvas {
   border-radius: 12px;
 }
 
+.weather-chart-grid {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.weather-chart-card {
+  padding: 12px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.weather-chart-card canvas {
+  min-height: 220px;
+}
+
 .moon-month-card {
   padding: 14px 10px;
   color: #eef6ff;
@@ -1173,6 +1234,10 @@ canvas {
     order: 1;
   }
 
+  .weather-dashboard {
+    order: 1;
+  }
+
   .shore-fishing-panel {
     order: 1;
   }
@@ -1205,6 +1270,7 @@ canvas {
   .catch-form-grid,
   .catch-stats,
   .catch-card-grid,
+  .weather-grid,
   .fun-badges-panel,
   .bar-badge-list {
     grid-template-columns: 1fr;

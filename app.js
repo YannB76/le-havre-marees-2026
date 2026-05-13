@@ -1,6 +1,8 @@
 const CSV_URL = "marees_le_havre_2026_evenements_COMPLET.csv";
 const ASTRONOMY_URL = "astronomie_le_havre_2026.json";
 const CATCH_LOG_STORAGE_KEY = "le-havre-marees-2026-catch-log";
+const LE_HAVRE_LATITUDE = 49.4938;
+const LE_HAVRE_LONGITUDE = 0.1077;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MONTHS = [
   "janvier", "fevrier", "mars", "avril", "mai", "juin",
@@ -155,8 +157,11 @@ const state = {
   view: "day",
   bigTideThreshold: 95,
   bigTideMonth: "all",
+  weatherWindUnit: "kmh",
   catches: [],
-  editingCatchId: null
+  editingCatchId: null,
+  weather: null,
+  weatherError: false
 };
 
 const els = {
@@ -174,6 +179,21 @@ const els = {
   sunTimes: document.querySelector("#sun-times"),
   moonTimes: document.querySelector("#moon-times"),
   moonPhase: document.querySelector("#moon-phase"),
+  weatherDate: document.querySelector("#weather-date"),
+  weatherWind: document.querySelector("#weather-wind"),
+  weatherGust: document.querySelector("#weather-gust"),
+  weatherRain: document.querySelector("#weather-rain"),
+  weatherTemperature: document.querySelector("#weather-temperature"),
+  weatherWave: document.querySelector("#weather-wave"),
+  weatherAdvice: document.querySelector("#weather-advice"),
+  weatherWindUnit: document.querySelector("#weather-wind-unit"),
+  weatherDashboardSummary: document.querySelector("#weather-dashboard-summary"),
+  windChartUnit: document.querySelector("#wind-chart-unit"),
+  rainChart: document.querySelector("#rain-chart"),
+  airTemperatureChart: document.querySelector("#air-temperature-chart"),
+  seaTemperatureChart: document.querySelector("#sea-temperature-chart"),
+  windChart: document.querySelector("#wind-chart"),
+  waveChart: document.querySelector("#wave-chart"),
   rangeLabel: document.querySelector("#range-label"),
   chart: document.querySelector("#tide-chart"),
   dayList: document.querySelector("#day-list"),
@@ -181,6 +201,7 @@ const els = {
   monthSelect: document.querySelector("#month-select"),
   viewButtons: document.querySelectorAll("[data-view]"),
   dayView: document.querySelector("#day-view"),
+  weatherView: document.querySelector("#weather-view"),
   bigTidesView: document.querySelector("#big-tides-view"),
   moonCalendarView: document.querySelector("#moon-calendar-view"),
   shoreFishingView: document.querySelector("#shore-fishing-view"),
@@ -241,6 +262,7 @@ async function init() {
     setupControls();
     selectInitialDate();
     render();
+    loadWeatherPrototype();
     registerServiceWorker();
   } catch (error) {
     document.body.innerHTML = `<main class="empty">Impossible de charger les horaires de maree. Lance l'application depuis un petit serveur local pour autoriser le chargement du CSV.</main>`;
@@ -307,6 +329,10 @@ function setupControls() {
   els.bigTideMonth.addEventListener("change", () => {
     state.bigTideMonth = els.bigTideMonth.value;
     renderBigTides();
+  });
+  els.weatherWindUnit.addEventListener("change", () => {
+    state.weatherWindUnit = els.weatherWindUnit.value;
+    renderWeatherDashboard();
   });
   els.regulationSearch.addEventListener("input", () => {
     renderFishingRegulations();
@@ -387,6 +413,8 @@ function render() {
   renderTable(events);
   renderSummaries(events);
   renderAstronomy();
+  renderWeatherPrototype();
+  renderWeatherDashboard();
   renderDayList(monthKey);
   renderBigTides();
   renderMoonCalendar();
@@ -411,6 +439,234 @@ function renderAstronomy() {
   els.moonPhase.textContent = data.moonPhase ?? nextMoonPhaseLabel(state.selectedDate);
 }
 
+async function loadWeatherPrototype() {
+  try {
+    const weatherUrl = new URL("https://api.open-meteo.com/v1/forecast");
+    weatherUrl.search = new URLSearchParams({
+      latitude: LE_HAVRE_LATITUDE,
+      longitude: LE_HAVRE_LONGITUDE,
+      timezone: "Europe/Paris",
+      forecast_days: "7",
+      wind_speed_unit: "kmh",
+      daily: [
+        "temperature_2m_max",
+        "temperature_2m_min",
+        "precipitation_sum",
+        "wind_speed_10m_max",
+        "wind_gusts_10m_max",
+        "wind_direction_10m_dominant"
+      ].join(",")
+    }).toString();
+
+    const marineUrl = new URL("https://marine-api.open-meteo.com/v1/marine");
+    marineUrl.search = new URLSearchParams({
+      latitude: LE_HAVRE_LATITUDE,
+      longitude: LE_HAVRE_LONGITUDE,
+      timezone: "Europe/Paris",
+      forecast_days: "7",
+      cell_selection: "sea",
+      daily: ["wave_height_max", "wave_period_max", "wave_direction_dominant", "sea_surface_temperature_max"].join(",")
+    }).toString();
+
+    const [weatherResponse, marineResponse] = await Promise.all([
+      fetch(weatherUrl),
+      fetch(marineUrl)
+    ]);
+    if (!weatherResponse.ok || !marineResponse.ok) throw new Error("Meteo indisponible");
+
+    state.weather = {
+      forecast: await weatherResponse.json(),
+      marine: await marineResponse.json()
+    };
+    state.weatherError = false;
+  } catch (error) {
+    state.weather = null;
+    state.weatherError = true;
+  }
+  renderWeatherPrototype();
+  renderWeatherDashboard();
+}
+
+function renderWeatherPrototype() {
+  if (state.weatherError) {
+    els.weatherDate.textContent = "Indisponible";
+    els.weatherWind.textContent = "-";
+    els.weatherGust.textContent = "-";
+    els.weatherRain.textContent = "-";
+    els.weatherTemperature.textContent = "-";
+    els.weatherWave.textContent = "-";
+    els.weatherAdvice.textContent = "Meteo et vent indisponibles pour le moment. Verifie une source meteo marine avant de partir.";
+    return;
+  }
+
+  if (!state.weather) {
+    els.weatherDate.textContent = "Chargement";
+    els.weatherWind.textContent = "Chargement";
+    els.weatherGust.textContent = "-";
+    els.weatherRain.textContent = "-";
+    els.weatherTemperature.textContent = "-";
+    els.weatherWave.textContent = "-";
+    els.weatherAdvice.textContent = "Prevision meteo indicative en cours de chargement.";
+    return;
+  }
+
+  const data = weatherForDate(state.selectedDate);
+  if (!data) {
+    els.weatherDate.textContent = "Hors prevision";
+    els.weatherWind.textContent = "-";
+    els.weatherGust.textContent = "-";
+    els.weatherRain.textContent = "-";
+    els.weatherTemperature.textContent = "-";
+    els.weatherWave.textContent = "-";
+    els.weatherAdvice.textContent = "Prevision meteo disponible seulement pour les prochains jours. Pour cette date, consulte une source meteo officielle.";
+    return;
+  }
+
+  els.weatherDate.textContent = formatShortDate(state.selectedDate);
+  els.weatherWind.textContent = `${roundWeather(data.wind)} km/h ${cardinalDirection(data.windDirection)}`;
+  els.weatherGust.textContent = `${roundWeather(data.gust)} km/h`;
+  els.weatherRain.textContent = `${formatWeatherNumber(data.rain, 1)} mm`;
+  els.weatherTemperature.textContent = `${formatWeatherNumber(data.tempMin, 0)}-${formatWeatherNumber(data.tempMax, 0)}°C / ${formatWeatherNumber(data.seaTemperature, 1)}°C`;
+  els.weatherWave.textContent = Number.isFinite(data.wave)
+    ? `${formatWeatherNumber(data.wave, 1)} m · ${formatWeatherNumber(data.wavePeriod, 0)} s`
+    : "-";
+  els.weatherAdvice.textContent = weatherAdviceFor(data);
+}
+
+function weatherForDate(dateString) {
+  const daily = state.weather?.forecast?.daily;
+  if (!daily?.time) return null;
+  const index = daily.time.indexOf(dateString);
+  if (index < 0) return null;
+  const marineDaily = state.weather?.marine?.daily;
+  const marineIndex = marineDaily?.time?.indexOf(dateString) ?? -1;
+  return {
+    tempMin: daily.temperature_2m_min?.[index],
+    tempMax: daily.temperature_2m_max?.[index],
+    rain: daily.precipitation_sum?.[index],
+    wind: daily.wind_speed_10m_max?.[index],
+    gust: daily.wind_gusts_10m_max?.[index],
+    windDirection: daily.wind_direction_10m_dominant?.[index],
+    wave: marineIndex >= 0 ? marineDaily.wave_height_max?.[marineIndex] : null,
+    wavePeriod: marineIndex >= 0 ? marineDaily.wave_period_max?.[marineIndex] : null,
+    waveDirection: marineIndex >= 0 ? marineDaily.wave_direction_dominant?.[marineIndex] : null,
+    seaTemperature: marineIndex >= 0 ? marineDaily.sea_surface_temperature_max?.[marineIndex] : null
+  };
+}
+
+function renderWeatherDashboard() {
+  if (!els.weatherView) return;
+  els.weatherWindUnit.value = state.weatherWindUnit;
+  els.windChartUnit.textContent = state.weatherWindUnit === "beaufort" ? "échelle Beaufort" : "km/h";
+
+  if (state.weatherError) {
+    els.weatherDashboardSummary.textContent = "Météo indisponible pour le moment. Vérifie une source météo marine avant de partir.";
+    clearWeatherCanvas(els.rainChart, "Pluie indisponible");
+    clearWeatherCanvas(els.airTemperatureChart, "Température air indisponible");
+    clearWeatherCanvas(els.seaTemperatureChart, "Température eau indisponible");
+    clearWeatherCanvas(els.windChart, "Vent indisponible");
+    clearWeatherCanvas(els.waveChart, "Houle indisponible");
+    return;
+  }
+
+  if (!state.weather) {
+    els.weatherDashboardSummary.textContent = "Prévisions météo indicatives en cours de chargement.";
+    clearWeatherCanvas(els.rainChart, "Chargement pluie");
+    clearWeatherCanvas(els.airTemperatureChart, "Chargement température air");
+    clearWeatherCanvas(els.seaTemperatureChart, "Chargement température eau");
+    clearWeatherCanvas(els.windChart, "Chargement vent");
+    clearWeatherCanvas(els.waveChart, "Chargement houle");
+    return;
+  }
+
+  const series = weatherForecastSeries();
+  if (!series.length) {
+    els.weatherDashboardSummary.textContent = "Aucune prévision météo exploitable pour le moment.";
+    return;
+  }
+
+  const maxWind = Math.max(...series.map((item) => item.gust || item.wind || 0));
+  const maxWave = Math.max(...series.map((item) => item.wave || 0));
+  const maxAir = Math.max(...series.map((item) => item.tempMax || 0));
+  const maxSea = Math.max(...series.map((item) => item.seaTemperature || 0));
+  const rainyDays = series.filter((item) => (item.rain || 0) >= 1).length;
+  els.weatherDashboardSummary.textContent = `${series.length} jours de prévision. Air jusqu'à ${formatWeatherNumber(maxAir, 0)}°C, eau jusqu'à ${formatWeatherNumber(maxSea, 1)}°C, rafale max ${Math.round(maxWind)} km/h, houle max ${formatWeatherNumber(maxWave, 1)} m, ${rainyDays} jour${rainyDays > 1 ? "s" : ""} avec pluie significative. Données indicatives Open-Meteo.`;
+
+  drawBarWeatherChart(els.rainChart, {
+    title: "Pluie",
+    unit: "mm",
+    color: "#2563eb",
+    values: series.map((item) => item.rain || 0),
+    labels: series.map((item) => weatherDayLabel(item.date)),
+    valueLabels: series.map((item) => `${formatWeatherNumber(item.rain || 0, 1)} mm`)
+  });
+
+  drawBarWeatherChart(els.airTemperatureChart, {
+    title: "Air",
+    unit: "°C",
+    color: "#d88416",
+    values: series.map((item) => item.tempMax || 0),
+    secondaryValues: series.map((item) => item.tempMin || 0),
+    labels: series.map((item) => weatherDayLabel(item.date)),
+    valueLabels: series.map((item) => `${formatWeatherNumber(item.tempMin, 0)}-${formatWeatherNumber(item.tempMax, 0)}°C`),
+    secondaryLabel: "Min"
+  });
+
+  drawBarWeatherChart(els.seaTemperatureChart, {
+    title: "Eau",
+    unit: "°C",
+    color: "#0ea5e9",
+    values: series.map((item) => item.seaTemperature || 0),
+    labels: series.map((item) => weatherDayLabel(item.date)),
+    valueLabels: series.map((item) => `${formatWeatherNumber(item.seaTemperature, 1)}°C`)
+  });
+
+  const useBeaufort = state.weatherWindUnit === "beaufort";
+  drawBarWeatherChart(els.windChart, {
+    title: "Vent",
+    unit: useBeaufort ? "Bf" : "km/h",
+    color: "#0f766e",
+    values: series.map((item) => useBeaufort ? beaufortFromKmh(item.wind) : item.wind || 0),
+    secondaryValues: series.map((item) => useBeaufort ? beaufortFromKmh(item.gust) : item.gust || 0),
+    labels: series.map((item) => weatherDayLabel(item.date)),
+    valueLabels: series.map((item) => {
+      const windText = useBeaufort ? `Bf ${beaufortFromKmh(item.wind)}` : `${Math.round(item.wind || 0)} km/h`;
+      return `${windText} ${cardinalDirection(item.windDirection)}`;
+    }),
+    secondaryLabel: useBeaufort ? "Rafales Bf" : "Rafales"
+  });
+
+  drawBarWeatherChart(els.waveChart, {
+    title: "Houle",
+    unit: "m",
+    color: "#1f3a5f",
+    values: series.map((item) => item.wave || 0),
+    labels: series.map((item) => weatherDayLabel(item.date)),
+    valueLabels: series.map((item) => Number.isFinite(item.wave)
+      ? `${formatWeatherNumber(item.wave, 1)} m · ${formatWeatherNumber(item.wavePeriod, 0)} s`
+      : "-")
+  });
+}
+
+function weatherForecastSeries() {
+  const times = state.weather?.forecast?.daily?.time ?? [];
+  return times.map((date) => ({ date, ...weatherForDate(date) })).filter((item) => item.date);
+}
+
+function weatherAdviceFor(data) {
+  const parts = [];
+  if (data.gust >= 70 || data.wave >= 2) {
+    parts.push("Conditions fortes : prudence renforcee sur digue, rochers et bord de mer.");
+  } else if (data.gust >= 45 || data.wind >= 30 || data.wave >= 1.2) {
+    parts.push("Vent ou mer sensible : sortie possible selon poste, mais prudence.");
+  } else {
+    parts.push("Conditions plutot calmes a moderees selon cette prevision.");
+  }
+  if (data.rain >= 5) parts.push("Pluie marquee prevue.");
+  parts.push("Avis indicatif : verifie toujours meteo marine, vent, houle et conditions locales avant de partir.");
+  return parts.join(" ");
+}
+
 function nextMoonPhaseLabel(dateString) {
   const next = state.moonPhases.find((item) => item.date >= dateString);
   if (!next) return "-";
@@ -419,6 +675,7 @@ function nextMoonPhaseLabel(dateString) {
 
 function renderView() {
   els.dayView.classList.toggle("is-hidden", state.view !== "day");
+  els.weatherView.classList.toggle("is-hidden", state.view !== "weather");
   els.bigTidesView.classList.toggle("is-hidden", state.view !== "big-tides");
   els.moonCalendarView.classList.toggle("is-hidden", state.view !== "moon-calendar");
   els.shoreFishingView.classList.toggle("is-hidden", state.view !== "shore-fishing");
@@ -1549,6 +1806,114 @@ function numberOrNull(value) {
 function formatOptionalNumber(value, unit) {
   if (!Number.isFinite(value)) return "-";
   return `${String(value).replace(".", ",")} ${unit}`;
+}
+
+function formatWeatherNumber(value, digits = 0) {
+  if (!Number.isFinite(value)) return "-";
+  return value.toFixed(digits).replace(".", ",");
+}
+
+function roundWeather(value) {
+  return Number.isFinite(value) ? Math.round(value) : "-";
+}
+
+function cardinalDirection(degrees) {
+  if (!Number.isFinite(degrees)) return "";
+  const directions = ["N", "NE", "E", "SE", "S", "SO", "O", "NO"];
+  return directions[Math.round(degrees / 45) % directions.length];
+}
+
+function beaufortFromKmh(speed) {
+  if (!Number.isFinite(speed)) return 0;
+  const thresholds = [1, 6, 12, 20, 29, 39, 50, 62, 75, 89, 103, 118];
+  const force = thresholds.findIndex((limit) => speed < limit);
+  return force === -1 ? 12 : force;
+}
+
+function weatherDayLabel(dateString) {
+  const date = parseLocalDate(dateString);
+  return `${SHORT_WEEKDAYS[date.getDay()]} ${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function clearWeatherCanvas(canvas, message) {
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#64748b";
+  ctx.font = "700 18px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+}
+
+function drawBarWeatherChart(canvas, options) {
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+  const pad = { top: 22, right: 18, bottom: 58, left: 48 };
+  const plotW = width - pad.left - pad.right;
+  const plotH = height - pad.top - pad.bottom;
+  const values = options.values.map((value) => Number.isFinite(value) ? value : 0);
+  const secondaryValues = options.secondaryValues?.map((value) => Number.isFinite(value) ? value : 0) ?? [];
+  const maxValue = Math.max(1, ...values, ...secondaryValues) * 1.18;
+  const barGap = 12;
+  const barW = (plotW - barGap * (values.length - 1)) / values.length;
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.strokeStyle = "#d7e1ea";
+  ctx.lineWidth = 1;
+  ctx.fillStyle = "#64748b";
+  ctx.font = "12px Arial";
+  ctx.textAlign = "right";
+  for (let i = 0; i <= 4; i += 1) {
+    const value = (maxValue / 4) * i;
+    const y = pad.top + plotH - (value / maxValue) * plotH;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(pad.left + plotW, y);
+    ctx.stroke();
+    ctx.fillText(formatWeatherNumber(value, value < 10 ? 1 : 0), pad.left - 8, y + 4);
+  }
+
+  values.forEach((value, index) => {
+    const x = pad.left + index * (barW + barGap);
+    const barH = (value / maxValue) * plotH;
+    const y = pad.top + plotH - barH;
+    ctx.fillStyle = options.color;
+    ctx.fillRect(x, y, barW, barH);
+
+    if (secondaryValues.length) {
+      const secondaryY = pad.top + plotH - (secondaryValues[index] / maxValue) * plotH;
+      ctx.strokeStyle = "#9f2d20";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x + 3, secondaryY);
+      ctx.lineTo(x + barW - 3, secondaryY);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = "#10213a";
+    ctx.font = "700 11px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(options.valueLabels[index], x + barW / 2, Math.max(y - 6, pad.top + 12));
+    ctx.fillStyle = "#475569";
+    ctx.font = "12px Arial";
+    ctx.fillText(options.labels[index], x + barW / 2, pad.top + plotH + 22);
+  });
+
+  ctx.fillStyle = "#10213a";
+  ctx.font = "700 13px Arial";
+  ctx.textAlign = "left";
+  ctx.fillText(`${options.title} (${options.unit})`, pad.left, 17);
+  if (options.secondaryLabel) {
+    ctx.fillStyle = "#9f2d20";
+    ctx.fillText(options.secondaryLabel, pad.left + 142, 17);
+  }
 }
 
 function topEntries(values) {

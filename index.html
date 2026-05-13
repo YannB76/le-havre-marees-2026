@@ -22,6 +22,7 @@
         </div>
         <nav class="view-menu" aria-label="Navigation principale">
           <button class="view-button is-active" type="button" data-view="day">Aujourd'hui</button>
+          <button class="view-button" type="button" data-view="weather">Météo</button>
           <button class="view-button" type="button" data-view="big-tides">Grosses marées</button>
           <button class="view-button" type="button" data-view="moon-calendar">Calendrier lunaire</button>
           <button class="view-button" type="button" data-view="shore-fishing">🎣 Avis pêche du bord</button>
@@ -48,6 +49,36 @@
             </label>
             <button class="compact-button" id="today-button" type="button">Aujourd'hui</button>
           </div>
+
+          <section class="weather-panel" aria-labelledby="weather-title">
+            <div class="chart-title">
+              <span id="weather-title">Météo & vent</span>
+              <span id="weather-date">Prévision</span>
+            </div>
+            <div class="weather-grid" id="weather-grid">
+              <article>
+                <span class="eyebrow">Vent</span>
+                <strong id="weather-wind">Chargement</strong>
+              </article>
+              <article>
+                <span class="eyebrow">Rafales</span>
+                <strong id="weather-gust">-</strong>
+              </article>
+              <article>
+                <span class="eyebrow">Pluie</span>
+                <strong id="weather-rain">-</strong>
+              </article>
+              <article>
+                <span class="eyebrow">Air / eau</span>
+                <strong id="weather-temperature">-</strong>
+              </article>
+              <article>
+                <span class="eyebrow">Houle</span>
+                <strong id="weather-wave">-</strong>
+              </article>
+            </div>
+            <p class="weather-advice" id="weather-advice">Prévision météo indicative en cours de chargement.</p>
+          </section>
 
           <section class="chart-panel" aria-label="Marégramme du jour">
             <div class="chart-title">
@@ -137,6 +168,64 @@
             </div>
           </div>
           <div class="moon-calendar-grid" id="moon-calendar-grid"></div>
+        </section>
+
+        <section class="weather-dashboard view-panel is-hidden" id="weather-view" aria-labelledby="weather-dashboard-title">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Prévisions indicatives</span>
+              <h2 id="weather-dashboard-title">Météo, vent & houle — Le Havre</h2>
+            </div>
+            <label class="threshold-control">
+              <span>Vitesse du vent</span>
+              <select id="weather-wind-unit">
+                <option value="kmh">km/h</option>
+                <option value="beaufort">Beaufort</option>
+              </select>
+            </label>
+          </div>
+
+          <p class="notice" id="weather-dashboard-summary">
+            Prévisions météo indicatives en cours de chargement.
+          </p>
+
+          <div class="weather-chart-grid">
+            <article class="weather-chart-card">
+              <div class="chart-title">
+                <span>Pluie prévue</span>
+                <span>mm / jour</span>
+              </div>
+              <canvas id="rain-chart" width="740" height="280"></canvas>
+            </article>
+            <article class="weather-chart-card">
+              <div class="chart-title">
+                <span>Température de l'air</span>
+                <span>min / max</span>
+              </div>
+              <canvas id="air-temperature-chart" width="740" height="280"></canvas>
+            </article>
+            <article class="weather-chart-card">
+              <div class="chart-title">
+                <span>Température de l'eau</span>
+                <span>surface mer</span>
+              </div>
+              <canvas id="sea-temperature-chart" width="740" height="280"></canvas>
+            </article>
+            <article class="weather-chart-card">
+              <div class="chart-title">
+                <span>Vent et direction</span>
+                <span id="wind-chart-unit">km/h</span>
+              </div>
+              <canvas id="wind-chart" width="740" height="280"></canvas>
+            </article>
+            <article class="weather-chart-card">
+              <div class="chart-title">
+                <span>Houle</span>
+                <span>mètres et période</span>
+              </div>
+              <canvas id="wave-chart" width="740" height="280"></canvas>
+            </article>
+          </div>
         </section>
 
         <section class="shore-fishing-panel view-panel is-hidden" id="shore-fishing-view" aria-labelledby="shore-fishing-title">
