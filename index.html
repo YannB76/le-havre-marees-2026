@@ -222,8 +222,9 @@
             <label class="catch-comment"><span>Commentaire</span><textarea id="catch-comment" rows="3"></textarea></label>
             <datalist id="species-list"></datalist>
             <div class="catch-form-actions">
-              <button class="compact-button" type="submit">Ajouter la prise</button>
+              <button class="compact-button" id="catch-submit" type="submit">Ajouter la prise</button>
               <button class="compact-button" id="catch-prefill" type="button">Préremplir avec la date</button>
+              <button class="compact-button is-hidden" id="catch-cancel-edit" type="button">Annuler la modification</button>
             </div>
             <p class="catch-regulation-preview" id="catch-regulation-preview">Renseigne une espèce et une taille pour vérifier la maille si disponible.</p>
           </form>

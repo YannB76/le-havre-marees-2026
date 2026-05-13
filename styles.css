@@ -116,6 +116,10 @@ main {
   display: none;
 }
 
+.is-hidden {
+  display: none !important;
+}
+
 .date-strip {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr) 44px;
@@ -835,6 +839,13 @@ canvas {
   justify-content: space-between;
   gap: 12px;
   align-items: start;
+}
+
+.catch-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .catch-card h3 {

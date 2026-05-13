@@ -155,7 +155,8 @@ const state = {
   view: "day",
   bigTideThreshold: 95,
   bigTideMonth: "all",
-  catches: []
+  catches: [],
+  editingCatchId: null
 };
 
 const els = {
@@ -204,7 +205,9 @@ const els = {
   catchTide: document.querySelector("#catch-tide"),
   catchWeather: document.querySelector("#catch-weather"),
   catchComment: document.querySelector("#catch-comment"),
+  catchSubmit: document.querySelector("#catch-submit"),
   catchPrefill: document.querySelector("#catch-prefill"),
+  catchCancelEdit: document.querySelector("#catch-cancel-edit"),
   catchRegulationPreview: document.querySelector("#catch-regulation-preview"),
   catchStats: document.querySelector("#catch-stats"),
   funBadgesPanel: document.querySelector("#fun-badges-panel"),
@@ -315,12 +318,20 @@ function setupControls() {
   els.catchPrefill.addEventListener("click", () => {
     prefillCatchForm();
   });
+  els.catchCancelEdit.addEventListener("click", () => {
+    resetCatchForm();
+  });
   [els.catchSpecies, els.catchSize, els.catchCount, els.catchDate].forEach((input) => {
     input.addEventListener("input", renderCatchRegulationPreview);
   });
   els.catchList.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-delete-catch]");
-    if (button) deleteCatch(button.dataset.deleteCatch);
+    const editButton = event.target.closest("[data-edit-catch]");
+    if (editButton) {
+      editCatch(editButton.dataset.editCatch);
+      return;
+    }
+    const deleteButton = event.target.closest("[data-delete-catch]");
+    if (deleteButton) deleteCatch(deleteButton.dataset.deleteCatch);
   });
   els.viewButtons.forEach((button) => {
     button.addEventListener("click", () => {
@@ -747,8 +758,9 @@ function prefillCatchForm() {
 function addCatchFromForm() {
   const date = clampDate(els.catchDate.value || state.selectedDate);
   const time = els.catchTime.value || "00:00";
+  const existingCatch = state.catches.find((item) => item.id === state.editingCatchId);
   const catchItem = {
-    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    id: existingCatch?.id ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`,
     date,
     time,
     species: els.catchSpecies.value.trim(),
@@ -764,15 +776,53 @@ function addCatchFromForm() {
     dayCoefficient: maxCoefficientForDate(date),
     estimatedHeight: estimatedHeightForDateTime(date, time),
     comment: els.catchComment.value.trim(),
-    createdAt: new Date().toISOString()
+    createdAt: existingCatch?.createdAt ?? new Date().toISOString(),
+    updatedAt: existingCatch ? new Date().toISOString() : undefined
   };
 
-  state.catches.unshift(catchItem);
+  if (existingCatch) {
+    state.catches = state.catches.map((item) => item.id === existingCatch.id ? catchItem : item);
+  } else {
+    state.catches.unshift(catchItem);
+  }
   saveCatchLog();
+  resetCatchForm();
+  renderCatchLog();
+}
+
+function editCatch(id) {
+  const item = state.catches.find((catchItem) => catchItem.id === id);
+  if (!item) return;
+  state.editingCatchId = id;
+  els.catchDate.value = item.date || state.selectedDate;
+  els.catchTime.value = item.time || "";
+  els.catchSpecies.value = item.species || "";
+  els.catchSize.value = Number.isFinite(item.sizeCm) ? item.sizeCm : "";
+  els.catchWeight.value = Number.isFinite(item.weightKg) ? item.weightKg : "";
+  els.catchCount.value = item.count || 1;
+  els.catchPlace.value = item.place || "";
+  els.catchMethod.value = item.method || "";
+  els.catchBait.value = item.bait || "";
+  els.catchTide.value = item.tide || "";
+  els.catchWeather.value = item.weather || "";
+  els.catchComment.value = item.comment || "";
+  renderCatchFormMode();
+  renderCatchRegulationPreview();
+  els.catchForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function resetCatchForm() {
+  state.editingCatchId = null;
   els.catchForm.reset();
   els.catchCount.value = "1";
+  renderCatchFormMode();
   prefillCatchForm();
-  renderCatchLog();
+}
+
+function renderCatchFormMode() {
+  const isEditing = Boolean(state.editingCatchId);
+  els.catchSubmit.textContent = isEditing ? "Enregistrer les modifications" : "Ajouter la prise";
+  els.catchCancelEdit.classList.toggle("is-hidden", !isEditing);
 }
 
 function deleteCatch(id) {
@@ -781,6 +831,7 @@ function deleteCatch(id) {
   const ok = window.confirm(`Supprimer la prise "${item.species || "sans espèce"}" du ${formatShortDate(item.date)} ?`);
   if (!ok) return;
   state.catches = state.catches.filter((catchItem) => catchItem.id !== id);
+  if (state.editingCatchId === id) resetCatchForm();
   saveCatchLog();
   renderCatchLog();
 }
@@ -810,7 +861,10 @@ function renderCatchLog() {
             <h3>${escapeHtml(catchItem.species || "Espèce non renseignée")}</h3>
             <p>${formatShortDate(catchItem.date)} à ${formatTimeForText(catchItem.time)} · ${escapeHtml(catchItem.place || "Lieu non renseigné")}</p>
           </div>
-          <button class="compact-button danger-button" type="button" data-delete-catch="${catchItem.id}">Supprimer</button>
+          <div class="catch-card-actions">
+            <button class="compact-button" type="button" data-edit-catch="${catchItem.id}">Modifier</button>
+            <button class="compact-button danger-button" type="button" data-delete-catch="${catchItem.id}">Supprimer</button>
+          </div>
         </div>
         <div class="catch-card-grid">
           <span><strong>Taille</strong>${formatOptionalNumber(catchItem.sizeCm, "cm")}</span>
