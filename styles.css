@@ -1004,6 +1004,61 @@ canvas {
   margin-top: 14px;
 }
 
+.best-fishing-slot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  margin-top: 14px;
+  padding: 16px;
+  color: #ffffff;
+  background: linear-gradient(120deg, #1f3a5f, #0f766e);
+  border: 1px solid rgba(217, 173, 85, 0.7);
+  border-radius: 10px;
+}
+
+.best-fishing-slot strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.35rem;
+}
+
+.best-fishing-slot p {
+  display: grid;
+  gap: 5px;
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.best-slot-score {
+  display: grid;
+  place-items: center;
+  min-width: 86px;
+  min-height: 86px;
+  color: var(--harbor);
+  background: var(--sand);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.35);
+}
+
+.best-slot-score span {
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.best-slot-score small {
+  font-weight: 800;
+}
+
+.best-fishing-slot.is-medium {
+  background: linear-gradient(120deg, #475569, #0f766e);
+}
+
+.best-fishing-slot.is-low {
+  background: linear-gradient(120deg, #475569, #64748b);
+}
+
 .weather-chart-card {
   padding: 12px;
   background: #ffffff;
@@ -1251,8 +1306,13 @@ canvas {
   }
 
   .panel-heading,
-  .big-tide-card {
+  .big-tide-card,
+  .best-fishing-slot {
     grid-template-columns: 1fr;
+  }
+
+  .best-slot-score {
+    justify-self: start;
   }
 
   .shore-advice-summary {

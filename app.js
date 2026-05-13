@@ -188,6 +188,10 @@ const els = {
   weatherAdvice: document.querySelector("#weather-advice"),
   weatherWindUnit: document.querySelector("#weather-wind-unit"),
   weatherDashboardSummary: document.querySelector("#weather-dashboard-summary"),
+  bestFishingSlot: document.querySelector("#best-fishing-slot"),
+  bestSlotTitle: document.querySelector("#best-slot-title"),
+  bestSlotDetail: document.querySelector("#best-slot-detail"),
+  bestSlotScore: document.querySelector("#best-slot-score"),
   windChartUnit: document.querySelector("#wind-chart-unit"),
   rainChart: document.querySelector("#rain-chart"),
   airTemperatureChart: document.querySelector("#air-temperature-chart"),
@@ -561,6 +565,7 @@ function renderWeatherDashboard() {
 
   if (state.weatherError) {
     els.weatherDashboardSummary.textContent = "Météo indisponible pour le moment. Vérifie une source météo marine avant de partir.";
+    renderBestFishingSlot(null, "Météo indisponible pour calculer le meilleur créneau.");
     clearWeatherCanvas(els.rainChart, "Pluie indisponible");
     clearWeatherCanvas(els.airTemperatureChart, "Température air indisponible");
     clearWeatherCanvas(els.seaTemperatureChart, "Température eau indisponible");
@@ -571,6 +576,7 @@ function renderWeatherDashboard() {
 
   if (!state.weather) {
     els.weatherDashboardSummary.textContent = "Prévisions météo indicatives en cours de chargement.";
+    renderBestFishingSlot(null, "Calcul du meilleur créneau en attente des prévisions.");
     clearWeatherCanvas(els.rainChart, "Chargement pluie");
     clearWeatherCanvas(els.airTemperatureChart, "Chargement température air");
     clearWeatherCanvas(els.seaTemperatureChart, "Chargement température eau");
@@ -582,6 +588,7 @@ function renderWeatherDashboard() {
   const series = weatherForecastSeries();
   if (!series.length) {
     els.weatherDashboardSummary.textContent = "Aucune prévision météo exploitable pour le moment.";
+    renderBestFishingSlot(null, "Aucune prévision exploitable pour calculer le meilleur créneau.");
     return;
   }
 
@@ -591,6 +598,7 @@ function renderWeatherDashboard() {
   const maxSea = Math.max(...series.map((item) => item.seaTemperature || 0));
   const rainyDays = series.filter((item) => (item.rain || 0) >= 1).length;
   els.weatherDashboardSummary.textContent = `${series.length} jours de prévision. Air jusqu'à ${formatWeatherNumber(maxAir, 0)}°C, eau jusqu'à ${formatWeatherNumber(maxSea, 1)}°C, rafale max ${Math.round(maxWind)} km/h, houle max ${formatWeatherNumber(maxWave, 1)} m, ${rainyDays} jour${rainyDays > 1 ? "s" : ""} avec pluie significative. Données indicatives Open-Meteo.`;
+  renderBestFishingSlot(findBestFishingSlot(series));
 
   drawBarWeatherChart(els.rainChart, {
     title: "Pluie",
@@ -651,6 +659,150 @@ function renderWeatherDashboard() {
 function weatherForecastSeries() {
   const times = state.weather?.forecast?.daily?.time ?? [];
   return times.map((date) => ({ date, ...weatherForDate(date) })).filter((item) => item.date);
+}
+
+function findBestFishingSlot(weatherSeries) {
+  const candidates = [];
+  weatherSeries.forEach((weather) => {
+    const events = state.days.get(weather.date) ?? [];
+    const maxCoeff = Math.max(...events.map((event) => event.coefficient || 0), 0);
+    events.forEach((event) => {
+      candidates.push(scoreFishingSlot(event, weather, maxCoeff));
+    });
+  });
+  return candidates
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score)[0] ?? null;
+}
+
+function scoreFishingSlot(event, weather, maxCoeff) {
+  if (!event) return null;
+  const isHigh = event.type === "Pleine mer";
+  const coefficient = event.coefficient || maxCoeff || 0;
+  const phase = phaseForDate(event.date);
+  const scoreParts = {
+    tide: isHigh ? 24 : 14,
+    coefficient: scoreCoefficient(coefficient),
+    wind: scoreWind(weather.wind, weather.gust),
+    wave: scoreWave(weather.wave),
+    rain: scoreRain(weather.rain),
+    moon: scoreMoon(phase),
+    temperature: scoreTemperature(weather.tempMax, weather.seaTemperature)
+  };
+  const rawScore = Object.values(scoreParts).reduce((sum, value) => sum + value, 0);
+  const score = Math.max(0, Math.min(100, Math.round(rawScore)));
+  const start = minutesToClock(event.minutes + (isHigh ? -120 : -60));
+  const end = minutesToClock(event.minutes + 60);
+  return {
+    event,
+    weather,
+    phase,
+    score,
+    scoreParts,
+    start,
+    end,
+    label: bestSlotLabel(score),
+    reasons: bestSlotReasons(event, weather, coefficient, phase)
+  };
+}
+
+function renderBestFishingSlot(slot, fallback = "Aucun créneau fiable trouvé sur la période de prévision.") {
+  if (!els.bestFishingSlot) return;
+  if (!slot) {
+    els.bestSlotTitle.textContent = "Créneau à confirmer";
+    els.bestSlotDetail.textContent = fallback;
+    els.bestSlotScore.textContent = "--";
+    els.bestFishingSlot.className = "best-fishing-slot";
+    return;
+  }
+  els.bestSlotTitle.textContent = `${bestSlotDisplayLabel(slot.score)} · ${formatLongDate(parseLocalDate(slot.event.date))}`;
+  els.bestSlotDetail.innerHTML = `
+    <span><strong>${slot.event.type}</strong> à ${formatTimeForText(slot.event.time)} · créneau conseillé ${formatTimeForText(slot.start)} – ${formatTimeForText(slot.end)}</span>
+    <span>${slot.reasons.map(escapeHtml).join(" · ")}</span>
+  `;
+  els.bestSlotScore.textContent = String(slot.score);
+  els.bestFishingSlot.className = `best-fishing-slot ${bestSlotClass(slot.score)}`;
+}
+
+function scoreCoefficient(coefficient) {
+  if (coefficient >= 100) return 25;
+  if (coefficient >= 90) return 23;
+  if (coefficient >= 75) return 19;
+  if (coefficient >= 60) return 14;
+  if (coefficient >= 45) return 9;
+  return 4;
+}
+
+function scoreWind(wind, gust) {
+  const reference = Math.max(wind || 0, gust || 0);
+  if (reference <= 25) return 18;
+  if (reference <= 40) return 14;
+  if (reference <= 55) return 8;
+  if (reference <= 70) return 3;
+  return -8;
+}
+
+function scoreWave(wave) {
+  if (!Number.isFinite(wave)) return 8;
+  if (wave <= 0.7) return 15;
+  if (wave <= 1.1) return 11;
+  if (wave <= 1.6) return 6;
+  if (wave <= 2.1) return 1;
+  return -8;
+}
+
+function scoreRain(rain) {
+  if (!Number.isFinite(rain) || rain <= 0.5) return 5;
+  if (rain <= 2) return 3;
+  if (rain <= 6) return 1;
+  return -3;
+}
+
+function scoreMoon(phase) {
+  if (phase === "Pleine Lune" || phase === "Nouvelle Lune") return 5;
+  if (phase === "Premier Quartier" || phase === "Dernier Quartier") return 2;
+  return 3;
+}
+
+function scoreTemperature(tempMax, seaTemperature) {
+  let score = 4;
+  if (Number.isFinite(tempMax) && tempMax < 6) score -= 2;
+  if (Number.isFinite(seaTemperature) && seaTemperature >= 12) score += 2;
+  return Math.max(0, Math.min(6, score));
+}
+
+function bestSlotLabel(score) {
+  if (score >= 82) return "À ne pas louper";
+  if (score >= 68) return "Très bon créneau";
+  if (score >= 52) return "Bon créneau";
+  return "Créneau moyen";
+}
+
+function bestSlotClass(score) {
+  if (score >= 82) return "is-excellent";
+  if (score >= 68) return "is-good";
+  if (score >= 52) return "is-medium";
+  return "is-low";
+}
+
+function bestSlotDisplayLabel(score) {
+  if (score >= 82) return "Excellent créneau";
+  if (score >= 68) return "Très bon créneau";
+  if (score >= 52) return "Bon créneau";
+  return "Créneau moyen";
+}
+
+function bestSlotReasons(event, weather, coefficient, phase) {
+  const reasons = [
+    `${event.type} bien placée`,
+    coefficient ? `coeff. ${coefficient}` : "coefficient à vérifier",
+    `vent ${Math.round(weather.wind || 0)} km/h`,
+    `rafales ${Math.round(weather.gust || 0)} km/h`
+  ];
+  if (Number.isFinite(weather.wave)) reasons.push(`houle ${formatWeatherNumber(weather.wave, 1)} m`);
+  if (Number.isFinite(weather.rain)) reasons.push(`pluie ${formatWeatherNumber(weather.rain, 1)} mm`);
+  if (phase) reasons.push(`lune : ${phaseShortLabel(phase)}`);
+  return reasons;
 }
 
 function weatherAdviceFor(data) {
