@@ -9,7 +9,31 @@ const MONTHS = [
 const WEEKDAYS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const SHORT_WEEKDAYS = ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."];
 const UNKNOWN_REGULATION = "À compléter / à vérifier sur source officielle";
-const BAR_BADGE_LEVELS = [42, 50, 60, 70, 80];
+const SECRET_SPECIES_BADGES = [
+  { name: "Lieu jaune", shortName: "LIEU", aliases: ["lieu jaune", "pollachius pollachius"] },
+  { name: "Maquereau", shortName: "MAQ", aliases: ["maquereau", "scomber scombrus"] },
+  { name: "Dorade grise", shortName: "DOR", aliases: ["dorade grise", "griset", "spondyliosoma cantharus"] },
+  { name: "Dorade royale", shortName: "DOR", aliases: ["dorade royale", "sparus aurata"] },
+  { name: "Sole", shortName: "SOLE", aliases: ["sole", "solea solea"] },
+  { name: "Limande", shortName: "LIM", aliases: ["limande", "limanda limanda"] },
+  { name: "Plie", shortName: "PLIE", aliases: ["plie", "carrelet", "pleuronectes platessa"] },
+  { name: "Turbot", shortName: "TUR", aliases: ["turbot", "scophthalmus maximus"] },
+  { name: "Congre", shortName: "CON", aliases: ["congre", "conger conger"] },
+  { name: "Vieille", shortName: "VIE", aliases: ["vieille", "labrus bergylta"] },
+  { name: "Mulet", shortName: "MUL", aliases: ["mulet", "mugilidae"] },
+  { name: "Orphie", shortName: "ORP", aliases: ["orphie", "belone belone"] },
+  { name: "Roussette", shortName: "ROU", aliases: ["roussette", "scyliorhinus canicula"] },
+  { name: "Raie", shortName: "RAIE", aliases: ["raie"] },
+  { name: "Merlan", shortName: "MER", aliases: ["merlan", "merlangius merlangus"] },
+  { name: "Seiche", shortName: "SEI", aliases: ["seiche", "sepia officinalis"] },
+  { name: "Encornet", shortName: "ENC", aliases: ["encornet", "calmar", "loligo"] },
+  { name: "Tourteau", shortName: "TOU", aliases: ["tourteau", "cancer pagurus"] },
+  { name: "Etrille", shortName: "ETR", aliases: ["etrille", "necora puber"] },
+  { name: "Homard", shortName: "HOM", aliases: ["homard", "homarus gammarus"] },
+  { name: "Coquille Saint-Jacques", shortName: "CSJ", aliases: ["coquille saint-jacques", "saint jacques", "pecten maximus"] }
+];
+const MARKING_REQUIRED_SPECIES = ["bar", "dorade royale", "homard", "lieu jaune", "maquereau", "sole"];
+const RECFISHING_2026_MEMN_SPECIES = ["bar", "dorade rose", "lieu jaune", "maquereau", "thon rouge"];
 
 const fishingRegulations = {
   bar: {
@@ -19,12 +43,12 @@ const fishingRegulations = {
     dailyLimit: 3,
     period: "Pêche autorisée du 1er avril au 31 janvier au nord du 48e parallèle. No-kill uniquement du 1er février au 31 mars.",
     noKill: "Obligatoire du 1er février au 31 mars ; autorisé hors période de conservation.",
-    markingRequired: "À vérifier sur source officielle",
+    markingRequired: "Oui",
     recFishing: "Oui",
     comment: "Nord du 48e parallèle : 3 individus maximum par pêcheur et par jour. Filets fixes interdits pour le bar. Données 2026 à vérifier avant sortie.",
     source: "DIRM Manche Est - Mer du Nord",
     sourceUrl: "https://www.dirm.memn.developpement-durable.gouv.fr/bar-et-lieu-jaune-regles-applicables-en-2026-pour-a1334.html",
-    lastChecked: "2026-05-05",
+    lastChecked: "2026-05-13",
     rules: {
       minSizeCm: 42,
       dailyLimit: 3,
@@ -40,12 +64,12 @@ const fishingRegulations = {
     dailyLimit: 2,
     period: "Capture et détention interdites du 1er janvier au 30 avril. Pêche autorisée du 1er mai au 31 décembre.",
     noKill: "Pêcher-relâcher interdit.",
-    markingRequired: "À vérifier sur source officielle",
+    markingRequired: "Oui",
     recFishing: "Oui",
     comment: "2 individus maximum par pêcheur et par jour. Données 2026 à vérifier avant sortie.",
     source: "DIRM Manche Est - Mer du Nord",
     sourceUrl: "https://www.dirm.memn.developpement-durable.gouv.fr/bar-et-lieu-jaune-regles-applicables-en-2026-pour-a1334.html",
-    lastChecked: "2026-05-05",
+    lastChecked: "2026-05-13",
     rules: {
       minSizeCm: 42,
       dailyLimit: 2,
@@ -53,7 +77,26 @@ const fishingRegulations = {
       allowedRanges: [{ start: "05-01", end: "12-31" }]
     }
   },
-  maquereau: officialSizeRegulation("Maquereau", "Scomber spp.", 20, "Taille minimale Mer du Nord, Manche, Atlantique : 20 cm. Attention : ligne spécifique Mer du Nord à 30 cm dans l'arrêté."),
+  maquereau: {
+    commonName: "Maquereau",
+    scientificName: "Scomber scombrus",
+    minSizeCm: 20,
+    dailyLimit: 10,
+    period: "Pas de fermeture spécifique trouvée pour Le Havre / Manche Est. Conservation possible sous réserve de taille, quota et conditions locales.",
+    noKill: "Autorisé si remise à l'eau immédiate ; conservation limitée à 10 maquereaux par pêcheur et par jour.",
+    markingRequired: "Oui. Depuis le bord : marquage dès la capture ; embarqué : au plus tard avant débarquement pour le maquereau.",
+    recFishing: "Oui, espèce listée en 2026 en zone CIEM 7 Manche-Mer du Nord.",
+    comment: "Le Havre est sur la Manche : taille minimale 20 cm. Le quota 2026 est de 10 maquereaux maximum par pêcheur et par jour dans les zones CIEM 4, 7 et 8. Vérifier les avis locaux avant conservation.",
+    source: "DIRM MEMN - pêche de loisir du maquereau 2026",
+    sourceUrl: "https://www.dirm.memn.developpement-durable.gouv.fr/%F0%9F%90%9F-peche-de-loisir-du-maquereau-reglementation-a1344.html",
+    lastChecked: "2026-05-13",
+    rules: {
+      minSizeCm: 20,
+      dailyLimit: 10,
+      recFishing: true,
+      allowedRanges: [{ start: "01-01", end: "12-31" }]
+    }
+  },
   doradeGrise: officialSizeRegulation("Dorade grise", "Spondyliosoma cantharus", 23),
   doradeRoyale: officialSizeRegulation("Dorade royale", "Sparus aurata", 23),
   sole: officialSizeRegulation("Sole", "Solea spp.", 25),
@@ -61,11 +104,39 @@ const fishingRegulations = {
   plieCarrelet: officialSizeRegulation("Plie / carrelet", "Pleuronectes platessa", 27),
   turbot: officialSizeRegulation("Turbot", "Psetta maxima", 30),
   congre: officialSizeRegulation("Congre", "Conger conger", 60),
-  vieille: regulationToVerify("Vieille", "Labrus bergylta"),
+  vieille: {
+    commonName: "Vieille",
+    scientificName: "Labrus bergylta",
+    minSizeCm: null,
+    minSizeText: "Pas de taille minimale nationale trouvée pour Mer du Nord, Manche, Atlantique.",
+    dailyLimit: null,
+    period: "Pas de fermeture spécifique trouvée pour Le Havre / Manche Est. À vérifier avant conservation.",
+    noKill: "Autorisé si remise à l'eau immédiate.",
+    markingRequired: "Non listé dans l'arrêté national de marquage, à vérifier selon espèce exacte.",
+    recFishing: "Non listé en 2026 pour la façade Manche Est - Mer du Nord, à vérifier si la liste évolue.",
+    comment: "Le 23 cm n'est pas confirmé par les sources officielles consultées. La vieille n'apparaît pas dans l'annexe nationale des tailles minimales Mer du Nord, Manche, Atlantique en vigueur au 14/01/2026.",
+    source: "Légifrance - tailles minimales de capture",
+    sourceUrl: "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000050864558",
+    lastChecked: "2026-05-13"
+  },
   merlan: officialSizeRegulation("Merlan", "Merlangius merlangus", 27),
   mulet: officialSizeRegulation("Mulet", "Mugil spp.", 30),
   orphie: officialSizeRegulation("Orphie", "Belone spp.", 30),
-  roussette: regulationToVerify("Roussette", null),
+  roussette: {
+    commonName: "Roussette",
+    scientificName: "Scyliorhinus canicula / Scyliorhinus stellaris",
+    minSizeCm: null,
+    minSizeText: "Pas de taille minimale nationale trouvée pour Mer du Nord, Manche, Atlantique.",
+    dailyLimit: null,
+    period: "Pas de fermeture spécifique trouvée pour Le Havre / Manche Est. À vérifier avant conservation.",
+    noKill: "Autorisé si remise à l'eau immédiate.",
+    markingRequired: "Non listé dans l'arrêté national de marquage, à vérifier selon espèce exacte.",
+    recFishing: "Non listé en 2026 pour la façade Manche Est - Mer du Nord, à vérifier si la liste évolue.",
+    comment: "Le 50 cm n'est pas confirmé par les sources officielles consultées. Sous le nom roussette, on rencontre notamment la petite roussette et la grande roussette : identifier l'espèce exacte avant conservation.",
+    source: "Légifrance - tailles minimales de capture",
+    sourceUrl: "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000050864558",
+    lastChecked: "2026-05-13"
+  },
   raie: officialSizeRegulation("Raie", "Rajiformes", 45, "Taille minimale générale Rajiformes : 45 cm. Raie brunette : 78 cm. Espèce exacte à vérifier avant conservation."),
   seiche: regulationToVerify("Seiche", "Sepia officinalis"),
   encornet: regulationToVerify("Encornet", null),
@@ -597,7 +668,7 @@ function renderFishingRegulations() {
         <span>${item.lastChecked}</span>
       </div>
       <dl class="regulation-facts">
-        <div><dt>Taille minimale</dt><dd>${formatRegulationSize(item.minSizeCm)}</dd></div>
+        <div><dt>Taille minimale</dt><dd>${formatRegulationSize(item)}</dd></div>
         <div><dt>Quota / jour</dt><dd>${formatRegulationLimit(item.dailyLimit)}</dd></div>
         <div><dt>Période</dt><dd>${displayRegulationValue(item.period)}</dd></div>
         <div><dt>No-kill</dt><dd>${displayRegulationValue(item.noKill)}</dd></div>
@@ -860,15 +931,14 @@ function renderBarBadges() {
   `;
   els.barBadgeList.innerHTML = "";
 
-  BAR_BADGE_LEVELS.forEach((level) => {
-    const unlocked = record && record.sizeCm >= level;
+  getUnlockedSecretSpeciesBadges().forEach(({ badge: secretBadge, catchItem }) => {
     const badge = document.createElement("article");
-    badge.className = `bar-badge ${unlocked ? "is-unlocked" : "is-locked"}`;
+    badge.className = "bar-badge is-unlocked secret-species-badge";
     badge.innerHTML = `
-      ${renderBarBadgeSvg(`${level}+`, "bar-badge-medal")}
+      ${renderSecretSpeciesBadgeSvg(secretBadge, catchItem)}
       <div class="bar-badge-text">
-        <strong>${unlocked ? "Badge débloqué" : "Badge verrouillé"}</strong>
-        <span>${unlocked ? `Record actuel : ${formatOptionalNumber(record.sizeCm, "cm")}` : `Ajoute un bar de ${level} cm ou plus`}</span>
+        <strong>${escapeHtml(secretBadge.name)}</strong>
+        <span>${formatSecretSpeciesBadgeText(catchItem)}</span>
       </div>
     `;
     els.barBadgeList.append(badge);
@@ -879,6 +949,44 @@ function getBarRecord() {
   return state.catches
     .filter((item) => normalizeSearch(item.species).includes("bar") && Number.isFinite(item.sizeCm))
     .sort((a, b) => b.sizeCm - a.sizeCm)[0] ?? null;
+}
+
+function getUnlockedSecretSpeciesBadges() {
+  return SECRET_SPECIES_BADGES
+    .map((badge) => ({ badge, catchItem: findBestCatchForSecretBadge(badge) }))
+    .filter((entry) => Boolean(entry.catchItem));
+}
+
+function findBestCatchForSecretBadge(badge) {
+  return state.catches
+    .filter((catchItem) => speciesMatchesSecretBadge(catchItem.species, badge))
+    .sort((a, b) => {
+      const sizeDiff = (b.sizeCm || 0) - (a.sizeCm || 0);
+      if (sizeDiff) return sizeDiff;
+      const weightDiff = (b.weightKg || 0) - (a.weightKg || 0);
+      if (weightDiff) return weightDiff;
+      const countDiff = (b.count || 1) - (a.count || 1);
+      if (countDiff) return countDiff;
+      return `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`);
+    })[0] ?? null;
+}
+
+function speciesMatchesSecretBadge(species, badge) {
+  const normalizedSpecies = normalizeSearch(species);
+  if (!normalizedSpecies) return false;
+  return badge.aliases.some((alias) => {
+    const normalizedAlias = normalizeSearch(alias);
+    return normalizedSpecies === normalizedAlias || normalizedSpecies.includes(normalizedAlias);
+  });
+}
+
+function formatSecretSpeciesBadgeText(catchItem) {
+  const sizeText = Number.isFinite(catchItem.sizeCm) ? formatOptionalNumber(catchItem.sizeCm, "cm") : "";
+  const weightText = Number.isFinite(catchItem.weightKg) ? formatOptionalNumber(catchItem.weightKg, "kg") : "";
+  const detail = [sizeText, weightText, `${catchItem.count || 1} prise${(catchItem.count || 1) > 1 ? "s" : ""}`]
+    .filter(Boolean)
+    .join(" · ");
+  return `${detail} · ${formatShortDate(catchItem.date)}`;
 }
 
 function renderBarBadgeSvg(label, className) {
@@ -912,6 +1020,39 @@ function renderBarBadgeSvg(label, className) {
       <path d="M72 177h96l20 17-17 30H69l-17-30Z" fill="url(#barBadgeGold)" stroke="#b98535" stroke-width="3" stroke-linejoin="round"/>
       <text x="120" y="209" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="900" fill="#0b2238">${safeLabel}</text>
       <path d="M95 223h50" stroke="#0b2238" stroke-width="4" stroke-linecap="round"/>
+    </svg>
+  `;
+}
+
+function renderSecretSpeciesBadgeSvg(badge, catchItem) {
+  const safeName = escapeHtml(badge.name);
+  const safeShortName = escapeHtml(badge.shortName);
+  const safeId = normalizeSearch(badge.name).replace(/[^a-z0-9]+/g, "-");
+  const label = Number.isFinite(catchItem.sizeCm)
+    ? `${Math.floor(catchItem.sizeCm)} cm`
+    : `${catchItem.count || 1}x`;
+  return `
+    <svg class="bar-badge-medal secret-medal" viewBox="0 0 240 240" role="img" aria-label="Badge ${safeName}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="secretBadgeSea-${safeId}" cx="50%" cy="36%" r="75%">
+          <stop offset="0%" stop-color="#315f72"/>
+          <stop offset="72%" stop-color="#12334a"/>
+          <stop offset="100%" stop-color="#071827"/>
+        </radialGradient>
+        <linearGradient id="secretBadgeGold-${safeId}" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#f8dc8f"/>
+          <stop offset="50%" stop-color="#d9ad55"/>
+          <stop offset="100%" stop-color="#9d6d2d"/>
+        </linearGradient>
+      </defs>
+      <circle cx="120" cy="120" r="112" fill="url(#secretBadgeGold-${safeId})"/>
+      <circle cx="120" cy="120" r="98" fill="url(#secretBadgeSea-${safeId})" stroke="#061525" stroke-width="2"/>
+      <path d="M103 30 120 55 137 30 146 64 94 64Z" fill="url(#secretBadgeGold-${safeId})"/>
+      <text x="120" y="112" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="900" fill="#f7fbff">${safeShortName}</text>
+      <path d="M58 134h124" stroke="url(#secretBadgeGold-${safeId})" stroke-width="5" stroke-linecap="round"/>
+      <path d="M58 153c15-9 30-9 45 0s30 9 45 0 29-9 44 0" fill="none" stroke="#6d8aa0" stroke-width="5" opacity=".42"/>
+      <path d="M72 177h96l20 17-17 30H69l-17-30Z" fill="url(#secretBadgeGold-${safeId})" stroke="#b98535" stroke-width="3" stroke-linejoin="round"/>
+      <text x="120" y="208" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="900" fill="#0b2238">${escapeHtml(label)}</text>
     </svg>
   `;
 }
@@ -1251,7 +1392,7 @@ function regulationToVerify(commonName, scientificName) {
   };
 }
 
-function officialSizeRegulation(commonName, scientificName, minSizeCm, comment = "Taille minimale officielle trouvée. Quotas, périodes, marquage et déclarations restent à vérifier selon zone et mode de pêche.") {
+function officialSizeRegulation(commonName, scientificName, minSizeCm, comment = "Taille minimale officielle trouvée. Quotas et périodes restent à vérifier selon zone et mode de pêche.") {
   return {
     commonName,
     scientificName,
@@ -1259,16 +1400,30 @@ function officialSizeRegulation(commonName, scientificName, minSizeCm, comment =
     dailyLimit: null,
     period: "À vérifier sur source officielle",
     noKill: "À vérifier sur source officielle",
-    markingRequired: "À vérifier",
-    recFishing: "À vérifier",
+    markingRequired: markingStatusForSpecies(commonName),
+    recFishing: recFishingStatusForSpecies(commonName),
     comment,
     source: "Légifrance - tailles minimales de capture",
-    sourceUrl: "https://www.legifrance.gouv.fr/loda/id/LEGISCTA000026582654/",
-    lastChecked: "2026-05-05",
+    sourceUrl: "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000050864558",
+    lastChecked: "2026-05-13",
     rules: {
       minSizeCm
     }
   };
+}
+
+function markingStatusForSpecies(commonName) {
+  const normalizedName = normalizeSearch(commonName);
+  return MARKING_REQUIRED_SPECIES.some((name) => normalizedName.includes(normalizeSearch(name)))
+    ? "Oui"
+    : "Non listé dans l'arrêté national de marquage, à vérifier selon espèce exacte.";
+}
+
+function recFishingStatusForSpecies(commonName) {
+  const normalizedName = normalizeSearch(commonName);
+  return RECFISHING_2026_MEMN_SPECIES.some((name) => normalizedName.includes(normalizeSearch(name)))
+    ? "Oui, espèce listée en 2026 pour la façade Manche Est - Mer du Nord."
+    : "Non listé en 2026 pour la façade Manche Est - Mer du Nord, à vérifier si la liste évolue.";
 }
 
 function displayRegulationValue(value) {
@@ -1276,8 +1431,9 @@ function displayRegulationValue(value) {
   return value;
 }
 
-function formatRegulationSize(value) {
-  return Number.isFinite(value) ? `${value} cm` : "À vérifier sur source officielle";
+function formatRegulationSize(item) {
+  if (Number.isFinite(item.minSizeCm)) return `${item.minSizeCm} cm`;
+  return item.minSizeText || "À vérifier sur source officielle";
 }
 
 function formatRegulationLimit(value) {

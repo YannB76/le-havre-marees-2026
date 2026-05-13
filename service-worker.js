@@ -1,4 +1,4 @@
-const CACHE_NAME = "marees-le-havre-2026-v17";
+const CACHE_NAME = "marees-le-havre-2026-v23";
 const ASSETS = [
   "./",
   "./index.html",
