@@ -183,6 +183,7 @@ const els = {
   weatherWind: document.querySelector("#weather-wind"),
   weatherGust: document.querySelector("#weather-gust"),
   weatherRain: document.querySelector("#weather-rain"),
+  weatherClouds: document.querySelector("#weather-clouds"),
   weatherTemperature: document.querySelector("#weather-temperature"),
   weatherWave: document.querySelector("#weather-wave"),
   weatherAdvice: document.querySelector("#weather-advice"),
@@ -194,6 +195,7 @@ const els = {
   bestSlotScore: document.querySelector("#best-slot-score"),
   windChartUnit: document.querySelector("#wind-chart-unit"),
   rainChart: document.querySelector("#rain-chart"),
+  cloudChart: document.querySelector("#cloud-chart"),
   airTemperatureChart: document.querySelector("#air-temperature-chart"),
   seaTemperatureChart: document.querySelector("#sea-temperature-chart"),
   windChart: document.querySelector("#wind-chart"),
@@ -455,11 +457,13 @@ async function loadWeatherPrototype() {
       daily: [
         "temperature_2m_max",
         "temperature_2m_min",
+        "weather_code",
         "precipitation_sum",
         "wind_speed_10m_max",
         "wind_gusts_10m_max",
         "wind_direction_10m_dominant"
-      ].join(",")
+      ].join(","),
+      hourly: "cloud_cover"
     }).toString();
 
     const marineUrl = new URL("https://marine-api.open-meteo.com/v1/marine");
@@ -497,6 +501,7 @@ function renderWeatherPrototype() {
     els.weatherWind.textContent = "-";
     els.weatherGust.textContent = "-";
     els.weatherRain.textContent = "-";
+    els.weatherClouds.textContent = "-";
     els.weatherTemperature.textContent = "-";
     els.weatherWave.textContent = "-";
     els.weatherAdvice.textContent = "Meteo et vent indisponibles pour le moment. Verifie une source meteo marine avant de partir.";
@@ -508,6 +513,7 @@ function renderWeatherPrototype() {
     els.weatherWind.textContent = "Chargement";
     els.weatherGust.textContent = "-";
     els.weatherRain.textContent = "-";
+    els.weatherClouds.textContent = "-";
     els.weatherTemperature.textContent = "-";
     els.weatherWave.textContent = "-";
     els.weatherAdvice.textContent = "Prevision meteo indicative en cours de chargement.";
@@ -520,6 +526,7 @@ function renderWeatherPrototype() {
     els.weatherWind.textContent = "-";
     els.weatherGust.textContent = "-";
     els.weatherRain.textContent = "-";
+    els.weatherClouds.textContent = "-";
     els.weatherTemperature.textContent = "-";
     els.weatherWave.textContent = "-";
     els.weatherAdvice.textContent = "Prevision meteo disponible seulement pour les prochains jours. Pour cette date, consulte une source meteo officielle.";
@@ -530,6 +537,7 @@ function renderWeatherPrototype() {
   els.weatherWind.textContent = `${roundWeather(data.wind)} km/h ${cardinalDirection(data.windDirection)}`;
   els.weatherGust.textContent = `${roundWeather(data.gust)} km/h`;
   els.weatherRain.textContent = `${formatWeatherNumber(data.rain, 1)} mm`;
+  els.weatherClouds.textContent = `${cloudCoverPercent(data)}% · ${cloudLabelForCode(data.weatherCode)}`;
   els.weatherTemperature.textContent = `${formatWeatherNumber(data.tempMin, 0)}-${formatWeatherNumber(data.tempMax, 0)}°C / ${formatWeatherNumber(data.seaTemperature, 1)}°C`;
   els.weatherWave.textContent = Number.isFinite(data.wave)
     ? `${formatWeatherNumber(data.wave, 1)} m · ${formatWeatherNumber(data.wavePeriod, 0)} s`
@@ -547,6 +555,8 @@ function weatherForDate(dateString) {
   return {
     tempMin: daily.temperature_2m_min?.[index],
     tempMax: daily.temperature_2m_max?.[index],
+    weatherCode: daily.weather_code?.[index],
+    cloudCover: cloudCoverForDate(dateString),
     rain: daily.precipitation_sum?.[index],
     wind: daily.wind_speed_10m_max?.[index],
     gust: daily.wind_gusts_10m_max?.[index],
@@ -567,6 +577,7 @@ function renderWeatherDashboard() {
     els.weatherDashboardSummary.textContent = "Météo indisponible pour le moment. Vérifie une source météo marine avant de partir.";
     renderBestFishingSlot(null, "Météo indisponible pour calculer le meilleur créneau.");
     clearWeatherCanvas(els.rainChart, "Pluie indisponible");
+    clearWeatherCanvas(els.cloudChart, "Ciel indisponible");
     clearWeatherCanvas(els.airTemperatureChart, "Température air indisponible");
     clearWeatherCanvas(els.seaTemperatureChart, "Température eau indisponible");
     clearWeatherCanvas(els.windChart, "Vent indisponible");
@@ -578,6 +589,7 @@ function renderWeatherDashboard() {
     els.weatherDashboardSummary.textContent = "Prévisions météo indicatives en cours de chargement.";
     renderBestFishingSlot(null, "Calcul du meilleur créneau en attente des prévisions.");
     clearWeatherCanvas(els.rainChart, "Chargement pluie");
+    clearWeatherCanvas(els.cloudChart, "Chargement ciel");
     clearWeatherCanvas(els.airTemperatureChart, "Chargement température air");
     clearWeatherCanvas(els.seaTemperatureChart, "Chargement température eau");
     clearWeatherCanvas(els.windChart, "Chargement vent");
@@ -597,7 +609,8 @@ function renderWeatherDashboard() {
   const maxAir = Math.max(...series.map((item) => item.tempMax || 0));
   const maxSea = Math.max(...series.map((item) => item.seaTemperature || 0));
   const rainyDays = series.filter((item) => (item.rain || 0) >= 1).length;
-  els.weatherDashboardSummary.textContent = `${series.length} jours de prévision. Air jusqu'à ${formatWeatherNumber(maxAir, 0)}°C, eau jusqu'à ${formatWeatherNumber(maxSea, 1)}°C, rafale max ${Math.round(maxWind)} km/h, houle max ${formatWeatherNumber(maxWave, 1)} m, ${rainyDays} jour${rainyDays > 1 ? "s" : ""} avec pluie significative. Données indicatives Open-Meteo.`;
+  const clearDays = series.filter((item) => cloudCoverPercent(item) <= 35).length;
+  els.weatherDashboardSummary.textContent = `${series.length} jours de prévision. Air jusqu'à ${formatWeatherNumber(maxAir, 0)}°C, eau jusqu'à ${formatWeatherNumber(maxSea, 1)}°C, rafale max ${Math.round(maxWind)} km/h, houle max ${formatWeatherNumber(maxWave, 1)} m, ${clearDays} jour${clearDays > 1 ? "s" : ""} avec soleil/éclaircies, ${rainyDays} jour${rainyDays > 1 ? "s" : ""} avec pluie significative. Données indicatives Open-Meteo.`;
   renderBestFishingSlot(findBestFishingSlot(series));
 
   drawBarWeatherChart(els.rainChart, {
@@ -607,6 +620,17 @@ function renderWeatherDashboard() {
     values: series.map((item) => item.rain || 0),
     labels: series.map((item) => weatherDayLabel(item.date)),
     valueLabels: series.map((item) => `${formatWeatherNumber(item.rain || 0, 1)} mm`)
+  });
+
+  drawBarWeatherChart(els.cloudChart, {
+    title: "Ciel",
+    unit: "% nébulosité",
+    color: "#64748b",
+    colors: series.map((item) => cloudColorForPercent(cloudCoverPercent(item), item.weatherCode)),
+    values: series.map((item) => cloudCoverPercent(item)),
+    labels: series.map((item) => weatherDayLabel(item.date)),
+    valueLabels: series.map((item) => `${cloudCoverPercent(item)}% ${cloudShortLabelForCode(item.weatherCode)}`),
+    maxValue: 100
   });
 
   drawBarWeatherChart(els.airTemperatureChart, {
@@ -1975,6 +1999,57 @@ function cardinalDirection(degrees) {
   return directions[Math.round(degrees / 45) % directions.length];
 }
 
+function cloudLabelForCode(code) {
+  if (code === 0) return "Soleil";
+  if (code === 1) return "Plutôt clair";
+  if (code === 2) return "Éclaircies";
+  if (code === 3) return "Nuageux";
+  if (code === 45 || code === 48) return "Brouillard";
+  if (code >= 95) return "Orage";
+  if (code >= 51) return "Pluie";
+  return "Variable";
+}
+
+function cloudShortLabelForCode(code) {
+  const label = cloudLabelForCode(code);
+  if (label === "Plutôt clair") return "Clair";
+  return label;
+}
+
+function cloudCoverForDate(dateString) {
+  const hourly = state.weather?.forecast?.hourly;
+  if (!hourly?.time?.length || !hourly?.cloud_cover?.length) return null;
+  const values = hourly.time
+    .map((time, index) => time.startsWith(dateString) ? hourly.cloud_cover[index] : null)
+    .filter((value) => Number.isFinite(value));
+  if (!values.length) return null;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function cloudCoverPercent(weather) {
+  if (Number.isFinite(weather?.cloudCover)) return Math.round(weather.cloudCover);
+  return cloudCoverFallbackForCode(weather?.weatherCode);
+}
+
+function cloudCoverFallbackForCode(code) {
+  if (code === 0) return 1;
+  if (code === 1) return 25;
+  if (code === 2) return 55;
+  if (code === 3) return 90;
+  if (code === 45 || code === 48) return 95;
+  if (code >= 95) return 100;
+  if (code >= 51) return 95;
+  return 50;
+}
+
+function cloudColorForPercent(percent, code) {
+  if (code >= 95) return "#111827";
+  if (code >= 51) return "#475569";
+  if (percent <= 30) return "#f6c343";
+  if (percent <= 65) return "#d8b75a";
+  return "#94a3b8";
+}
+
 function beaufortFromKmh(speed) {
   if (!Number.isFinite(speed)) return 0;
   const thresholds = [1, 6, 12, 20, 29, 39, 50, 62, 75, 89, 103, 118];
@@ -2009,7 +2084,7 @@ function drawBarWeatherChart(canvas, options) {
   const plotH = height - pad.top - pad.bottom;
   const values = options.values.map((value) => Number.isFinite(value) ? value : 0);
   const secondaryValues = options.secondaryValues?.map((value) => Number.isFinite(value) ? value : 0) ?? [];
-  const maxValue = Math.max(1, ...values, ...secondaryValues) * 1.18;
+  const maxValue = options.maxValue ?? Math.max(1, ...values, ...secondaryValues) * 1.18;
   const barGap = 12;
   const barW = (plotW - barGap * (values.length - 1)) / values.length;
 
@@ -2036,7 +2111,7 @@ function drawBarWeatherChart(canvas, options) {
     const x = pad.left + index * (barW + barGap);
     const barH = (value / maxValue) * plotH;
     const y = pad.top + plotH - barH;
-    ctx.fillStyle = options.color;
+    ctx.fillStyle = options.colors?.[index] ?? options.color;
     ctx.fillRect(x, y, barW, barH);
 
     if (secondaryValues.length) {
