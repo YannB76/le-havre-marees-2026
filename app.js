@@ -190,6 +190,12 @@ const els = {
   weatherAdvice: document.querySelector("#weather-advice"),
   weatherWindUnit: document.querySelector("#weather-wind-unit"),
   weatherDashboardSummary: document.querySelector("#weather-dashboard-summary"),
+  tripDashboard: document.querySelector("#fishing-trip-dashboard"),
+  tripDashboardTitle: document.querySelector("#trip-dashboard-title"),
+  tripDashboardAdvice: document.querySelector("#trip-dashboard-advice"),
+  tripDashboardScore: document.querySelector("#trip-dashboard-score"),
+  tripDashboardGrid: document.querySelector("#trip-dashboard-grid"),
+  tripScoreBreakdown: document.querySelector("#trip-score-breakdown"),
   bestFishingSlot: document.querySelector("#best-fishing-slot"),
   bestSlotTitle: document.querySelector("#best-slot-title"),
   bestSlotDetail: document.querySelector("#best-slot-detail"),
@@ -238,6 +244,10 @@ const els = {
   catchSubmit: document.querySelector("#catch-submit"),
   catchPrefill: document.querySelector("#catch-prefill"),
   catchCancelEdit: document.querySelector("#catch-cancel-edit"),
+  catchExportCsv: document.querySelector("#catch-export-csv"),
+  catchExportJson: document.querySelector("#catch-export-json"),
+  catchImportJson: document.querySelector("#catch-import-json"),
+  catchImportFile: document.querySelector("#catch-import-file"),
   catchRegulationPreview: document.querySelector("#catch-regulation-preview"),
   catchStats: document.querySelector("#catch-stats"),
   funBadgesPanel: document.querySelector("#fun-badges-panel"),
@@ -356,6 +366,13 @@ function setupControls() {
   els.catchCancelEdit.addEventListener("click", () => {
     resetCatchForm();
   });
+  els.catchExportCsv.addEventListener("click", exportCatchLogCsv);
+  els.catchExportJson.addEventListener("click", exportCatchLogJson);
+  els.catchImportJson.addEventListener("click", () => {
+    els.catchImportFile.value = "";
+    els.catchImportFile.click();
+  });
+  els.catchImportFile.addEventListener("change", importCatchLogJson);
   [els.catchDate, els.catchTime].forEach((input) => {
     input.addEventListener("input", () => updateCatchContextFields());
   });
@@ -591,6 +608,7 @@ function renderWeatherDashboard() {
 
   if (state.weatherError) {
     els.weatherDashboardSummary.textContent = "Météo indisponible pour le moment. Vérifie une source météo marine avant de partir.";
+    renderCurrentTripDashboard(null, "Météo indisponible pour analyser la date sélectionnée.");
     renderBestFishingSlot(null, "Météo indisponible pour calculer le meilleur créneau.");
     clearWeatherCanvas(els.rainChart, "Pluie indisponible");
     clearWeatherCanvas(els.cloudChart, "Ciel indisponible");
@@ -604,6 +622,7 @@ function renderWeatherDashboard() {
 
   if (!state.weather) {
     els.weatherDashboardSummary.textContent = "Prévisions météo indicatives en cours de chargement.";
+    renderCurrentTripDashboard(null, "Calcul en attente des prévisions météo.");
     renderBestFishingSlot(null, "Calcul du meilleur créneau en attente des prévisions.");
     clearWeatherCanvas(els.rainChart, "Chargement pluie");
     clearWeatherCanvas(els.cloudChart, "Chargement ciel");
@@ -618,6 +637,7 @@ function renderWeatherDashboard() {
   const series = weatherForecastSeries();
   if (!series.length) {
     els.weatherDashboardSummary.textContent = "Aucune prévision météo exploitable pour le moment.";
+    renderCurrentTripDashboard(null, "Aucune donnée exploitable pour analyser la date sélectionnée.");
     renderBestFishingSlot(null, "Aucune prévision exploitable pour calculer le meilleur créneau.");
     clearWeatherCanvas(els.pressureChart, "Pression indisponible");
     return;
@@ -630,7 +650,9 @@ function renderWeatherDashboard() {
   const rainyDays = series.filter((item) => (item.rain || 0) >= 1).length;
   const clearDays = series.filter((item) => cloudCoverPercent(item) <= 35).length;
   els.weatherDashboardSummary.textContent = `${series.length} jours de prévision. Air jusqu'à ${formatWeatherNumber(maxAir, 0)}°C, eau jusqu'à ${formatWeatherNumber(maxSea, 1)}°C, rafale max ${Math.round(maxWind)} km/h, houle max ${formatWeatherNumber(maxWave, 1)} m, ${clearDays} jour${clearDays > 1 ? "s" : ""} avec soleil/éclaircies, ${rainyDays} jour${rainyDays > 1 ? "s" : ""} avec pluie significative. Données indicatives Open-Meteo.`;
-  renderBestFishingSlot(findBestFishingSlot(series));
+  const bestSlot = findBestFishingSlot(series);
+  renderCurrentTripDashboard(buildSelectedDateTripSlot());
+  renderBestFishingSlot(bestSlot);
 
   drawBarWeatherChart(els.rainChart, {
     title: "Pluie",
@@ -758,6 +780,16 @@ function scoreFishingSlot(event, weather, maxCoeff) {
   };
 }
 
+function buildSelectedDateTripSlot() {
+  const weather = weatherForDate(state.selectedDate);
+  if (!weather) return null;
+  const events = state.days.get(state.selectedDate) ?? [];
+  if (!events.length) return null;
+  const event = nextTideForSelectedDay() || events[0];
+  const maxCoeff = Math.max(...events.map((item) => item.coefficient || 0), 0);
+  return scoreFishingSlot(event, weather, maxCoeff);
+}
+
 function renderBestFishingSlot(slot, fallback = "Aucun créneau fiable trouvé sur la période de prévision.") {
   if (!els.bestFishingSlot) return;
   if (!slot) {
@@ -774,6 +806,72 @@ function renderBestFishingSlot(slot, fallback = "Aucun créneau fiable trouvé s
   `;
   els.bestSlotScore.textContent = String(slot.score);
   els.bestFishingSlot.className = `best-fishing-slot ${bestSlotClass(slot.score)}`;
+}
+
+function renderCurrentTripDashboard(slot, fallback = "Aucune donnée fiable trouvée pour la date sélectionnée.") {
+  if (!els.tripDashboard) return;
+  if (!slot) {
+    els.tripDashboardTitle.textContent = "Conditions à confirmer";
+    els.tripDashboardAdvice.textContent = fallback;
+    els.tripDashboardScore.textContent = "--";
+    els.tripDashboardGrid.innerHTML = "";
+    els.tripScoreBreakdown.innerHTML = "";
+    els.tripDashboard.className = "fishing-trip-dashboard";
+    return;
+  }
+
+  const weather = slot.weather;
+  const coefficient = slot.event.coefficient || maxCoefficientForDate(slot.event.date);
+  const pressureText = Number.isFinite(weather.pressure) ? `${Math.round(weather.pressure)} hPa` : "-";
+  const cloudText = `${cloudCoverPercent(weather)}% · ${cloudShortLabelForCode(weather.weatherCode)}`;
+  const tideWindow = `${formatTimeForText(slot.start)} – ${formatTimeForText(slot.end)}`;
+
+  els.tripDashboardTitle.textContent = `${currentTripDashboardVerdict(slot.score)} · ${formatLongDate(parseLocalDate(slot.event.date))}`;
+  els.tripDashboardAdvice.textContent = currentTripDashboardAdvice(slot);
+  els.tripDashboardScore.textContent = String(slot.score);
+  els.tripDashboardGrid.innerHTML = `
+    <article><span>Référence</span><strong>${formatTimeForText(slot.event.time)}</strong><small>${escapeHtml(tideWindow)}</small></article>
+    <article><span>Marée</span><strong>${escapeHtml(slot.event.type)}</strong><small>coeff. ${coefficient || "-"}</small></article>
+    <article><span>Vent</span><strong>${Math.round(weather.wind || 0)} km/h</strong><small>rafales ${Math.round(weather.gust || 0)} km/h</small></article>
+    <article><span>Houle</span><strong>${Number.isFinite(weather.wave) ? `${formatWeatherNumber(weather.wave, 1)} m` : "-"}</strong><small>${Number.isFinite(weather.wavePeriod) ? `${formatWeatherNumber(weather.wavePeriod, 0)} s` : "période -"}</small></article>
+    <article><span>Pluie</span><strong>${formatWeatherNumber(weather.rain || 0, 1)} mm</strong><small>${rainConditionLabel(weather.rain)}</small></article>
+    <article><span>Ciel</span><strong>${escapeHtml(cloudText)}</strong><small>${escapeHtml(skyConditionLabel(cloudCoverPercent(weather), cloudLabelForCode(weather.weatherCode)))}</small></article>
+    <article><span>Pression</span><strong>${pressureText}</strong><small>${escapeHtml(pressureConditionLabel(weather.pressure) || "-")}</small></article>
+    <article><span>Lune</span><strong>${escapeHtml(phaseShortLabel(slot.phase))}</strong><small>${escapeHtml(slot.phase)}</small></article>
+  `;
+  els.tripScoreBreakdown.innerHTML = scoreBreakdownItems(slot.scoreParts)
+    .map((item) => `<span><strong>${item.label}</strong>${item.value > 0 ? "+" : ""}${item.value}</span>`)
+    .join("");
+  els.tripDashboard.className = `fishing-trip-dashboard ${bestSlotClass(slot.score)}`;
+}
+
+function currentTripDashboardVerdict(score) {
+  if (score >= 82) return "Très bonnes conditions";
+  if (score >= 68) return "Bonnes conditions";
+  if (score >= 52) return "Conditions correctes";
+  return "Conditions moyennes";
+}
+
+function currentTripDashboardAdvice(slot) {
+  const warnings = [];
+  if ((slot.weather.gust || 0) >= 55) warnings.push("rafales soutenues");
+  if ((slot.weather.wave || 0) >= 1.6) warnings.push("houle formée");
+  if ((slot.weather.rain || 0) >= 6) warnings.push("pluie marquée");
+  if (warnings.length) return `Pour la date sélectionnée : prudence avec ${warnings.join(", ")}. Vérifie les conditions locales avant de partir.`;
+  if (slot.score >= 68) return "La date sélectionnée présente un bon alignement marée, météo et lune.";
+  return "Conditions exploitables selon le poste, mais ce n'est pas forcément le meilleur créneau de la semaine.";
+}
+
+function scoreBreakdownItems(scoreParts) {
+  return [
+    { label: "Marée", value: scoreParts.tide },
+    { label: "Coeff.", value: scoreParts.coefficient },
+    { label: "Vent", value: scoreParts.wind },
+    { label: "Houle", value: scoreParts.wave },
+    { label: "Pluie", value: scoreParts.rain },
+    { label: "Lune", value: scoreParts.moon },
+    { label: "Temp.", value: scoreParts.temperature }
+  ];
 }
 
 function scoreCoefficient(coefficient) {
@@ -1205,6 +1303,168 @@ function loadCatchLog() {
 
 function saveCatchLog() {
   localStorage.setItem(CATCH_LOG_STORAGE_KEY, JSON.stringify(state.catches));
+}
+
+function exportCatchLogCsv() {
+  if (!state.catches.length) {
+    window.alert("Aucune prise à exporter pour le moment.");
+    return;
+  }
+  const headers = [
+    "date", "heure", "espece", "taille_cm", "poids_kg", "nombre", "lieu_poste",
+    "type_peche", "appat_leurre", "maree_associee", "meteo", "coefficient",
+    "hauteur_estimee_m", "lune", "commentaire"
+  ];
+  const rows = state.catches
+    .slice()
+    .sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`))
+    .map((item) => [
+      item.date,
+      item.time,
+      item.species,
+      item.sizeCm,
+      item.weightKg,
+      item.count,
+      item.place,
+      item.method,
+      item.bait,
+      item.tide,
+      item.weather,
+      item.dayCoefficient,
+      item.estimatedHeight,
+      item.moonPhase,
+      item.comment
+    ]);
+  const csv = [headers, ...rows].map((row) => row.map(csvCell).join(";")).join("\n");
+  downloadTextFile(`carnet-prises-le-havre-${todayStamp()}.csv`, `\uFEFF${csv}`, "text/csv;charset=utf-8");
+}
+
+function exportCatchLogJson() {
+  if (!state.catches.length) {
+    window.alert("Aucune prise à sauvegarder pour le moment.");
+    return;
+  }
+  const backup = {
+    app: "le-havre-marees-2026",
+    type: "catch-log-backup",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    catches: state.catches
+  };
+  downloadTextFile(
+    `sauvegarde-carnet-prises-le-havre-${todayStamp()}.json`,
+    JSON.stringify(backup, null, 2),
+    "application/json;charset=utf-8"
+  );
+}
+
+function importCatchLogJson(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      const imported = parseCatchLogBackup(String(reader.result || ""));
+      if (!imported.length) {
+        window.alert("Aucune prise valide trouvée dans ce fichier.");
+        return;
+      }
+      const replace = window.confirm(
+        `${imported.length} prise(s) trouvée(s).\n\nOK : remplacer le carnet actuel.\nAnnuler : fusionner avec le carnet actuel.`
+      );
+      if (replace) {
+        const ok = window.confirm("Remplacer le carnet actuel ? Cette action écrase les prises stockées dans ce navigateur.");
+        if (!ok) return;
+        state.catches = imported;
+      } else {
+        state.catches = mergeCatchLogs(state.catches, imported);
+      }
+      saveCatchLog();
+      resetCatchForm();
+      renderCatchLog();
+      window.alert(`Carnet importé : ${state.catches.length} prise(s) dans le carnet.`);
+    } catch (error) {
+      window.alert("Import impossible : le fichier JSON ne semble pas être une sauvegarde valide du carnet.");
+    }
+  });
+  reader.readAsText(file);
+}
+
+function parseCatchLogBackup(raw) {
+  const parsed = JSON.parse(raw);
+  const catches = Array.isArray(parsed) ? parsed : parsed?.catches;
+  if (!Array.isArray(catches)) throw new Error("Format invalide");
+  return catches
+    .map(normalizeImportedCatch)
+    .filter((item) => item.date && item.time && item.species);
+}
+
+function normalizeImportedCatch(item) {
+  const date = clampDate(String(item.date || state.selectedDate));
+  const time = /^\d{2}:\d{2}$/.test(String(item.time || "")) ? item.time : "00:00";
+  return {
+    id: item.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    date,
+    time,
+    species: String(item.species || "").trim(),
+    sizeCm: importedNumberOrNull(item.sizeCm),
+    weightKg: importedNumberOrNull(item.weightKg),
+    count: Math.max(Number(item.count) || 1, 1),
+    place: String(item.place || "").trim(),
+    method: String(item.method || "").trim(),
+    bait: String(item.bait || "").trim(),
+    tide: String(item.tide || describeAssociatedTide(date, time)).trim(),
+    weather: String(item.weather || "").trim(),
+    weatherSnapshot: item.weatherSnapshot && typeof item.weatherSnapshot === "object" ? item.weatherSnapshot : null,
+    moonPhase: item.moonPhase || phaseForDate(date),
+    dayCoefficient: Number(item.dayCoefficient) || maxCoefficientForDate(date) || null,
+    estimatedHeight: Number.isFinite(Number(item.estimatedHeight)) ? Number(item.estimatedHeight) : estimatedHeightForDateTime(date, time),
+    comment: String(item.comment || "").trim(),
+    createdAt: item.createdAt || new Date().toISOString(),
+    updatedAt: item.updatedAt
+  };
+}
+
+function mergeCatchLogs(current, imported) {
+  const byId = new Map(current.map((item) => [item.id, item]));
+  imported.forEach((item) => {
+    if (!byId.has(item.id)) {
+      byId.set(item.id, item);
+      return;
+    }
+    byId.set(`${item.id}-import-${Math.random().toString(16).slice(2)}`, {
+      ...item,
+      id: `${item.id}-import-${Date.now()}`
+    });
+  });
+  return [...byId.values()].sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`));
+}
+
+function downloadTextFile(filename, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function csvCell(value) {
+  const text = value === null || value === undefined ? "" : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function importedNumberOrNull(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function todayStamp() {
+  return toIsoDate(new Date());
 }
 
 function prefillCatchForm() {

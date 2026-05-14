@@ -10,7 +10,7 @@
     <title>Le Havre Marées 2026</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="apple-touch-icon" href="icons/icon.svg">
-    <link rel="stylesheet" href="styles.css?v=36">
+    <link rel="stylesheet" href="styles.css?v=39">
   </head>
   <body>
     <div class="app-shell">
@@ -197,6 +197,20 @@
             Prévisions météo indicatives en cours de chargement.
           </p>
 
+          <section class="fishing-trip-dashboard" id="fishing-trip-dashboard" aria-label="Conditions de la date sélectionnée">
+            <div class="trip-dashboard-main">
+              <span class="eyebrow">Conditions de la date sélectionnée</span>
+              <strong id="trip-dashboard-title">Analyse en cours</strong>
+              <p id="trip-dashboard-advice">Analyse des marées et des conditions météo marine.</p>
+            </div>
+            <div class="trip-dashboard-score">
+              <span id="trip-dashboard-score">--</span>
+              <small>/100</small>
+            </div>
+            <div class="trip-dashboard-grid" id="trip-dashboard-grid"></div>
+            <div class="trip-score-breakdown" id="trip-score-breakdown"></div>
+          </section>
+
           <section class="best-fishing-slot" id="best-fishing-slot" aria-label="Meilleur créneau pêche de la semaine">
             <div>
               <span class="eyebrow">Créneau à ne pas louper</span>
@@ -352,6 +366,10 @@
               <button class="compact-button" id="catch-submit" type="submit">Ajouter la prise</button>
               <button class="compact-button" id="catch-prefill" type="button">Préremplir date & météo</button>
               <button class="compact-button is-hidden" id="catch-cancel-edit" type="button">Annuler la modification</button>
+              <button class="compact-button" id="catch-export-csv" type="button">Exporter CSV</button>
+              <button class="compact-button" id="catch-export-json" type="button">Sauvegarde JSON</button>
+              <button class="compact-button" id="catch-import-json" type="button">Importer JSON</button>
+              <input class="is-hidden" id="catch-import-file" type="file" accept="application/json,.json">
             </div>
             <p class="catch-regulation-preview" id="catch-regulation-preview">Renseigne une espèce et une taille pour vérifier la maille si disponible.</p>
           </form>
@@ -382,6 +400,6 @@
       </footer>
     </div>
 
-    <script src="app.js?v=36"></script>
+    <script src="app.js?v=39"></script>
   </body>
 </html>
