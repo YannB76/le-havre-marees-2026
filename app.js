@@ -186,6 +186,7 @@ const els = {
   weatherClouds: document.querySelector("#weather-clouds"),
   weatherTemperature: document.querySelector("#weather-temperature"),
   weatherWave: document.querySelector("#weather-wave"),
+  weatherPressure: document.querySelector("#weather-pressure"),
   weatherAdvice: document.querySelector("#weather-advice"),
   weatherWindUnit: document.querySelector("#weather-wind-unit"),
   weatherDashboardSummary: document.querySelector("#weather-dashboard-summary"),
@@ -199,6 +200,7 @@ const els = {
   airTemperatureChart: document.querySelector("#air-temperature-chart"),
   seaTemperatureChart: document.querySelector("#sea-temperature-chart"),
   windChart: document.querySelector("#wind-chart"),
+  pressureChart: document.querySelector("#pressure-chart"),
   waveChart: document.querySelector("#wave-chart"),
   rangeLabel: document.querySelector("#range-label"),
   chart: document.querySelector("#tide-chart"),
@@ -231,6 +233,7 @@ const els = {
   catchBait: document.querySelector("#catch-bait"),
   catchTide: document.querySelector("#catch-tide"),
   catchWeather: document.querySelector("#catch-weather"),
+  catchContextPreview: document.querySelector("#catch-context-preview"),
   catchComment: document.querySelector("#catch-comment"),
   catchSubmit: document.querySelector("#catch-submit"),
   catchPrefill: document.querySelector("#catch-prefill"),
@@ -353,6 +356,9 @@ function setupControls() {
   els.catchCancelEdit.addEventListener("click", () => {
     resetCatchForm();
   });
+  [els.catchDate, els.catchTime].forEach((input) => {
+    input.addEventListener("input", () => updateCatchContextFields());
+  });
   [els.catchSpecies, els.catchSize, els.catchCount, els.catchDate].forEach((input) => {
     input.addEventListener("input", renderCatchRegulationPreview);
   });
@@ -463,7 +469,7 @@ async function loadWeatherPrototype() {
         "wind_gusts_10m_max",
         "wind_direction_10m_dominant"
       ].join(","),
-      hourly: "cloud_cover"
+      hourly: ["cloud_cover", "pressure_msl"].join(",")
     }).toString();
 
     const marineUrl = new URL("https://marine-api.open-meteo.com/v1/marine");
@@ -493,6 +499,9 @@ async function loadWeatherPrototype() {
   }
   renderWeatherPrototype();
   renderWeatherDashboard();
+  if (!state.editingCatchId) updateCatchContextFields();
+  renderCatchLog();
+  renderCatchRegulationPreview();
 }
 
 function renderWeatherPrototype() {
@@ -504,6 +513,7 @@ function renderWeatherPrototype() {
     els.weatherClouds.textContent = "-";
     els.weatherTemperature.textContent = "-";
     els.weatherWave.textContent = "-";
+    els.weatherPressure.textContent = "-";
     els.weatherAdvice.textContent = "Meteo et vent indisponibles pour le moment. Verifie une source meteo marine avant de partir.";
     return;
   }
@@ -516,6 +526,7 @@ function renderWeatherPrototype() {
     els.weatherClouds.textContent = "-";
     els.weatherTemperature.textContent = "-";
     els.weatherWave.textContent = "-";
+    els.weatherPressure.textContent = "-";
     els.weatherAdvice.textContent = "Prevision meteo indicative en cours de chargement.";
     return;
   }
@@ -529,6 +540,7 @@ function renderWeatherPrototype() {
     els.weatherClouds.textContent = "-";
     els.weatherTemperature.textContent = "-";
     els.weatherWave.textContent = "-";
+    els.weatherPressure.textContent = "-";
     els.weatherAdvice.textContent = "Prevision meteo disponible seulement pour les prochains jours. Pour cette date, consulte une source meteo officielle.";
     return;
   }
@@ -541,6 +553,9 @@ function renderWeatherPrototype() {
   els.weatherTemperature.textContent = `${formatWeatherNumber(data.tempMin, 0)}-${formatWeatherNumber(data.tempMax, 0)}°C / ${formatWeatherNumber(data.seaTemperature, 1)}°C`;
   els.weatherWave.textContent = Number.isFinite(data.wave)
     ? `${formatWeatherNumber(data.wave, 1)} m · ${formatWeatherNumber(data.wavePeriod, 0)} s`
+    : "-";
+  els.weatherPressure.textContent = Number.isFinite(data.pressure)
+    ? `${Math.round(data.pressure)} hPa`
     : "-";
   els.weatherAdvice.textContent = weatherAdviceFor(data);
 }
@@ -557,6 +572,7 @@ function weatherForDate(dateString) {
     tempMax: daily.temperature_2m_max?.[index],
     weatherCode: daily.weather_code?.[index],
     cloudCover: cloudCoverForDate(dateString),
+    pressure: averageHourlyValueForDate(dateString, "pressure_msl"),
     rain: daily.precipitation_sum?.[index],
     wind: daily.wind_speed_10m_max?.[index],
     gust: daily.wind_gusts_10m_max?.[index],
@@ -581,6 +597,7 @@ function renderWeatherDashboard() {
     clearWeatherCanvas(els.airTemperatureChart, "Température air indisponible");
     clearWeatherCanvas(els.seaTemperatureChart, "Température eau indisponible");
     clearWeatherCanvas(els.windChart, "Vent indisponible");
+    clearWeatherCanvas(els.pressureChart, "Pression indisponible");
     clearWeatherCanvas(els.waveChart, "Houle indisponible");
     return;
   }
@@ -593,6 +610,7 @@ function renderWeatherDashboard() {
     clearWeatherCanvas(els.airTemperatureChart, "Chargement température air");
     clearWeatherCanvas(els.seaTemperatureChart, "Chargement température eau");
     clearWeatherCanvas(els.windChart, "Chargement vent");
+    clearWeatherCanvas(els.pressureChart, "Chargement pression");
     clearWeatherCanvas(els.waveChart, "Chargement houle");
     return;
   }
@@ -601,6 +619,7 @@ function renderWeatherDashboard() {
   if (!series.length) {
     els.weatherDashboardSummary.textContent = "Aucune prévision météo exploitable pour le moment.";
     renderBestFishingSlot(null, "Aucune prévision exploitable pour calculer le meilleur créneau.");
+    clearWeatherCanvas(els.pressureChart, "Pression indisponible");
     return;
   }
 
@@ -666,6 +685,15 @@ function renderWeatherDashboard() {
       return `${windText} ${cardinalDirection(item.windDirection)}`;
     }),
     secondaryLabel: useBeaufort ? "Rafales Bf" : "Rafales"
+  });
+
+  drawLineWeatherChart(els.pressureChart, {
+    title: "Pression",
+    unit: "hPa",
+    color: "#7c3aed",
+    values: series.map((item) => item.pressure),
+    labels: series.map((item) => weatherDayLabel(item.date)),
+    valueLabels: series.map((item) => Number.isFinite(item.pressure) ? `${Math.round(item.pressure)} hPa` : "-")
   });
 
   drawBarWeatherChart(els.waveChart, {
@@ -1184,14 +1212,55 @@ function prefillCatchForm() {
   const selectedIsToday = toIsoDate(now) === state.selectedDate;
   els.catchDate.value = state.selectedDate;
   els.catchTime.value = selectedIsToday ? minutesToClock(now.getHours() * 60 + now.getMinutes()) : "";
-  els.catchTide.value = describeAssociatedTide(els.catchDate.value, els.catchTime.value);
+  updateCatchContextFields({ overwriteWeather: true });
   renderCatchRegulationPreview();
+}
+
+function updateCatchContextFields(options = {}) {
+  const date = clampDate(els.catchDate.value || state.selectedDate);
+  const time = els.catchTime.value || "";
+  els.catchTide.value = describeAssociatedTide(date, time);
+
+  const snapshot = getCatchWeatherSnapshot(date, time);
+  if (snapshot && (options.overwriteWeather || !els.catchWeather.value.trim())) {
+    els.catchWeather.value = formatCatchWeatherSummary(snapshot);
+  }
+  renderCatchContextPreview(date, time, snapshot);
+}
+
+function renderCatchContextPreview(date, time, snapshot) {
+  if (!els.catchContextPreview) return;
+  const tide = describeAssociatedTide(date, time);
+  if (!snapshot) {
+    els.catchContextPreview.innerHTML = `
+      <span class="eyebrow">Conditions détectées</span>
+      <p><strong>Marée :</strong> ${escapeHtml(tide || "-")}</p>
+      <p>Météo disponible seulement pour les prochains jours. Tu peux compléter le champ météo à la main.</p>
+    `;
+    return;
+  }
+
+  els.catchContextPreview.innerHTML = `
+    <span class="eyebrow">Conditions détectées</span>
+    <div class="catch-context-grid">
+      <span><strong>Marée</strong>${escapeHtml(tide || "-")}</span>
+      <span><strong>Vent</strong>${formatSnapshotWind(snapshot)}</span>
+      <span><strong>Rafales</strong>${formatOptionalWeather(snapshot.gustKmh, "km/h")}</span>
+      <span><strong>Houle</strong>${formatOptionalWeather(snapshot.waveM, "m", 1)}</span>
+      <span><strong>Pluie</strong>${formatOptionalWeather(snapshot.rainMm, "mm", 1)}</span>
+      <span><strong>Ciel</strong>${Number.isFinite(snapshot.cloudCover) ? `${snapshot.cloudCover}% · ${escapeHtml(snapshot.sky || "")}` : "-"}</span>
+      <span><strong>Pression</strong>${formatOptionalWeather(snapshot.pressureHpa, "hPa", 0)}</span>
+      <span><strong>Air</strong>${Number.isFinite(snapshot.airMaxC) ? `${formatWeatherNumber(snapshot.airMinC, 0)}-${formatWeatherNumber(snapshot.airMaxC, 0)}°C` : "-"}</span>
+      <span><strong>Eau</strong>${formatOptionalWeather(snapshot.seaTemperatureC, "°C", 1)}</span>
+    </div>
+  `;
 }
 
 function addCatchFromForm() {
   const date = clampDate(els.catchDate.value || state.selectedDate);
   const time = els.catchTime.value || "00:00";
   const existingCatch = state.catches.find((item) => item.id === state.editingCatchId);
+  const weatherSnapshot = getCatchWeatherSnapshot(date, time) || existingCatch?.weatherSnapshot || null;
   const catchItem = {
     id: existingCatch?.id ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`,
     date,
@@ -1204,7 +1273,8 @@ function addCatchFromForm() {
     method: els.catchMethod.value.trim(),
     bait: els.catchBait.value.trim(),
     tide: els.catchTide.value.trim() || describeAssociatedTide(date, time),
-    weather: els.catchWeather.value.trim(),
+    weather: els.catchWeather.value.trim() || (weatherSnapshot ? formatCatchWeatherSummary(weatherSnapshot) : ""),
+    weatherSnapshot,
     moonPhase: phaseForDate(date),
     dayCoefficient: maxCoefficientForDate(date),
     estimatedHeight: estimatedHeightForDateTime(date, time),
@@ -1221,6 +1291,128 @@ function addCatchFromForm() {
   saveCatchLog();
   resetCatchForm();
   renderCatchLog();
+}
+
+function getCatchWeatherSnapshot(date, time) {
+  const data = weatherForDate(date);
+  if (!data) return null;
+  const cloudCover = cloudCoverPercent(data);
+  const snapshot = {
+    date,
+    time,
+    windKmh: roundWeather(data.wind),
+    gustKmh: roundWeather(data.gust),
+    windDirection: cardinalDirection(data.windDirection),
+    rainMm: Number.isFinite(data.rain) ? Number(data.rain) : null,
+    cloudCover,
+    sky: cloudLabelForCode(data.weatherCode),
+    pressureHpa: Number.isFinite(data.pressure) ? Number(data.pressure) : null,
+    waveM: Number.isFinite(data.wave) ? Number(data.wave) : null,
+    wavePeriodS: Number.isFinite(data.wavePeriod) ? Number(data.wavePeriod) : null,
+    airMinC: Number.isFinite(data.tempMin) ? Number(data.tempMin) : null,
+    airMaxC: Number.isFinite(data.tempMax) ? Number(data.tempMax) : null,
+    seaTemperatureC: Number.isFinite(data.seaTemperature) ? Number(data.seaTemperature) : null
+  };
+  return {
+    ...snapshot,
+    windLabel: windConditionLabel(snapshot.gustKmh || snapshot.windKmh),
+    waveLabel: waveConditionLabel(snapshot.waveM),
+    skyLabel: skyConditionLabel(snapshot.cloudCover, snapshot.sky),
+    rainLabel: rainConditionLabel(snapshot.rainMm),
+    pressureLabel: pressureConditionLabel(snapshot.pressureHpa)
+  };
+}
+
+function formatCatchWeatherSummary(snapshot) {
+  if (!snapshot) return "";
+  const parts = [];
+  if (Number.isFinite(snapshot.windKmh)) {
+    parts.push(`vent ${snapshot.windKmh} km/h${snapshot.windDirection ? ` ${snapshot.windDirection}` : ""}`);
+  }
+  if (Number.isFinite(snapshot.gustKmh)) parts.push(`rafales ${snapshot.gustKmh} km/h`);
+  if (Number.isFinite(snapshot.waveM)) parts.push(`houle ${formatWeatherNumber(snapshot.waveM, 1)} m`);
+  if (Number.isFinite(snapshot.rainMm)) parts.push(`pluie ${formatWeatherNumber(snapshot.rainMm, 1)} mm`);
+  if (Number.isFinite(snapshot.cloudCover)) parts.push(`ciel ${snapshot.cloudCover}% ${snapshot.sky || ""}`.trim());
+  if (Number.isFinite(snapshot.pressureHpa)) parts.push(`pression ${Math.round(snapshot.pressureHpa)} hPa`);
+  if (Number.isFinite(snapshot.airMaxC)) parts.push(`air ${formatWeatherNumber(snapshot.airMinC, 0)}-${formatWeatherNumber(snapshot.airMaxC, 0)}°C`);
+  if (Number.isFinite(snapshot.seaTemperatureC)) parts.push(`eau ${formatWeatherNumber(snapshot.seaTemperatureC, 1)}°C`);
+  return parts.join(" · ");
+}
+
+function formatSnapshotWind(snapshot) {
+  if (!Number.isFinite(snapshot.windKmh)) return "-";
+  return `${snapshot.windKmh} km/h${snapshot.windDirection ? ` ${escapeHtml(snapshot.windDirection)}` : ""}`;
+}
+
+function formatOptionalWeather(value, unit, digits = 0) {
+  if (!Number.isFinite(value)) return "-";
+  return `${formatWeatherNumber(value, digits)} ${unit}`;
+}
+
+function catchWeatherSnapshotForStats(catchItem) {
+  const stored = catchItem.weatherSnapshot;
+  if (stored) {
+    return {
+      ...stored,
+      windLabel: stored.windLabel || windConditionLabel(stored.gustKmh || stored.windKmh),
+      waveLabel: stored.waveLabel || waveConditionLabel(stored.waveM),
+      skyLabel: stored.skyLabel || skyConditionLabel(stored.cloudCover, stored.sky),
+      rainLabel: stored.rainLabel || rainConditionLabel(stored.rainMm),
+      pressureLabel: stored.pressureLabel || pressureConditionLabel(stored.pressureHpa)
+    };
+  }
+  return getCatchWeatherSnapshot(catchItem.date, catchItem.time);
+}
+
+function renderCatchConditionFacts(catchItem) {
+  const snapshot = catchWeatherSnapshotForStats(catchItem);
+  if (!snapshot) return "";
+  return `
+    <span><strong>Vent</strong>${escapeHtml(snapshot.windLabel || "-")}</span>
+    <span><strong>Houle</strong>${escapeHtml(snapshot.waveLabel || "-")}</span>
+    <span><strong>Ciel</strong>${escapeHtml(snapshot.skyLabel || "-")}</span>
+    <span><strong>Pluie</strong>${escapeHtml(snapshot.rainLabel || "-")}</span>
+    <span><strong>Pression</strong>${escapeHtml(snapshot.pressureLabel || "-")}</span>
+  `;
+}
+
+function windConditionLabel(speed) {
+  if (!Number.isFinite(speed)) return "";
+  if (speed <= 25) return "Calme";
+  if (speed <= 45) return "Modéré";
+  if (speed <= 65) return "Fort";
+  return "Très fort";
+}
+
+function waveConditionLabel(wave) {
+  if (!Number.isFinite(wave)) return "";
+  if (wave <= 0.7) return "Calme";
+  if (wave <= 1.2) return "Formée";
+  if (wave <= 1.8) return "Forte";
+  return "Très forte";
+}
+
+function skyConditionLabel(cloudCover, sky) {
+  if (sky === "Orage") return "Orageux";
+  if (sky === "Pluie") return "Pluvieux";
+  if (!Number.isFinite(cloudCover)) return sky || "";
+  if (cloudCover <= 30) return "Dégagé";
+  if (cloudCover <= 65) return "Éclaircies";
+  return "Couvert";
+}
+
+function rainConditionLabel(rain) {
+  if (!Number.isFinite(rain) || rain <= 0.5) return "Sec";
+  if (rain <= 2) return "Faible";
+  if (rain <= 6) return "Pluie";
+  return "Forte pluie";
+}
+
+function pressureConditionLabel(pressure) {
+  if (!Number.isFinite(pressure)) return "";
+  if (pressure < 1000) return "Basse";
+  if (pressure <= 1020) return "Normale";
+  return "Haute";
 }
 
 function editCatch(id) {
@@ -1306,6 +1498,7 @@ function renderCatchLog() {
           <span><strong>Type</strong>${escapeHtml(catchItem.method || "-")}</span>
           <span><strong>Appât / leurre</strong>${escapeHtml(catchItem.bait || "-")}</span>
           <span><strong>Météo</strong>${escapeHtml(catchItem.weather || "-")}</span>
+          ${renderCatchConditionFacts(catchItem)}
           <span><strong>Marée</strong>${escapeHtml(catchItem.tide || "-")}</span>
           <span><strong>Coeff.</strong>${catchItem.dayCoefficient || "-"}</span>
           <span><strong>Hauteur estimée</strong>${catchItem.estimatedHeight ? formatHeight(catchItem.estimatedHeight) : "-"}</span>
@@ -1324,6 +1517,12 @@ function renderCatchStats() {
   const topSpecies = topEntries(state.catches.map((item) => item.species).filter(Boolean));
   const topTides = topEntries(state.catches.map((item) => tideKindFromText(item.tide)).filter(Boolean));
   const bestCoeff = Math.max(...state.catches.map((item) => item.dayCoefficient || 0), 0);
+  const conditionSnapshots = state.catches.map(catchWeatherSnapshotForStats).filter(Boolean);
+  const topWind = topEntries(conditionSnapshots.map((item) => item.windLabel).filter(Boolean));
+  const topWave = topEntries(conditionSnapshots.map((item) => item.waveLabel).filter(Boolean));
+  const topSky = topEntries(conditionSnapshots.map((item) => item.skyLabel).filter(Boolean));
+  const topRain = topEntries(conditionSnapshots.map((item) => item.rainLabel).filter(Boolean));
+  const topPressure = topEntries(conditionSnapshots.map((item) => item.pressureLabel).filter(Boolean));
 
   els.catchStats.innerHTML = `
     <article><span class="eyebrow">Prises</span><strong>${totalCount}</strong></article>
@@ -1331,6 +1530,11 @@ function renderCatchStats() {
     <article><span class="eyebrow">Espèce fréquente</span><strong>${topSpecies || "-"}</strong></article>
     <article><span class="eyebrow">Marée fréquente</span><strong>${topTides || "-"}</strong></article>
     <article><span class="eyebrow">Meilleur coeff.</span><strong>${bestCoeff || "-"}</strong></article>
+    <article><span class="eyebrow">Vent fréquent</span><strong>${topWind || "-"}</strong></article>
+    <article><span class="eyebrow">Houle fréquente</span><strong>${topWave || "-"}</strong></article>
+    <article><span class="eyebrow">Ciel fréquent</span><strong>${topSky || "-"}</strong></article>
+    <article><span class="eyebrow">Pluie fréquente</span><strong>${topRain || "-"}</strong></article>
+    <article><span class="eyebrow">Pression fréquente</span><strong>${topPressure || "-"}</strong></article>
   `;
 }
 
@@ -2017,10 +2221,15 @@ function cloudShortLabelForCode(code) {
 }
 
 function cloudCoverForDate(dateString) {
+  return averageHourlyValueForDate(dateString, "cloud_cover");
+}
+
+function averageHourlyValueForDate(dateString, field) {
   const hourly = state.weather?.forecast?.hourly;
-  if (!hourly?.time?.length || !hourly?.cloud_cover?.length) return null;
+  const fieldValues = hourly?.[field];
+  if (!hourly?.time?.length || !fieldValues?.length) return null;
   const values = hourly.time
-    .map((time, index) => time.startsWith(dateString) ? hourly.cloud_cover[index] : null)
+    .map((time, index) => time.startsWith(dateString) ? fieldValues[index] : null)
     .filter((value) => Number.isFinite(value));
   if (!values.length) return null;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -2141,6 +2350,79 @@ function drawBarWeatherChart(canvas, options) {
     ctx.fillStyle = "#9f2d20";
     ctx.fillText(options.secondaryLabel, pad.left + 142, 17);
   }
+}
+
+function drawLineWeatherChart(canvas, options) {
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+  const pad = { top: 24, right: 18, bottom: 58, left: 54 };
+  const plotW = width - pad.left - pad.right;
+  const plotH = height - pad.top - pad.bottom;
+  const values = options.values.map((value) => Number.isFinite(value) ? value : null);
+  const usable = values.filter((value) => Number.isFinite(value));
+  if (!usable.length) {
+    clearWeatherCanvas(canvas, `${options.title} indisponible`);
+    return;
+  }
+  const minValue = Math.floor(Math.min(...usable) - 4);
+  const maxValue = Math.ceil(Math.max(...usable) + 4);
+  const range = Math.max(1, maxValue - minValue);
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.strokeStyle = "#d7e1ea";
+  ctx.lineWidth = 1;
+  ctx.fillStyle = "#64748b";
+  ctx.font = "12px Arial";
+  ctx.textAlign = "right";
+  for (let i = 0; i <= 4; i += 1) {
+    const value = minValue + (range / 4) * i;
+    const y = pad.top + plotH - ((value - minValue) / range) * plotH;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(pad.left + plotW, y);
+    ctx.stroke();
+    ctx.fillText(formatWeatherNumber(value, 0), pad.left - 8, y + 4);
+  }
+
+  const stepX = values.length > 1 ? plotW / (values.length - 1) : plotW;
+  ctx.strokeStyle = options.color;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  values.forEach((value, index) => {
+    if (!Number.isFinite(value)) return;
+    const x = pad.left + stepX * index;
+    const y = pad.top + plotH - ((value - minValue) / range) * plotH;
+    if (index === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  values.forEach((value, index) => {
+    const x = pad.left + stepX * index;
+    ctx.fillStyle = "#475569";
+    ctx.font = "12px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(options.labels[index], x, pad.top + plotH + 22);
+    if (!Number.isFinite(value)) return;
+    const y = pad.top + plotH - ((value - minValue) / range) * plotH;
+    ctx.fillStyle = options.color;
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#10213a";
+    ctx.font = "700 11px Arial";
+    ctx.fillText(options.valueLabels[index], x, Math.max(y - 8, pad.top + 12));
+  });
+
+  ctx.fillStyle = "#10213a";
+  ctx.font = "700 13px Arial";
+  ctx.textAlign = "left";
+  ctx.fillText(`${options.title} (${options.unit})`, pad.left, 17);
 }
 
 function topEntries(values) {

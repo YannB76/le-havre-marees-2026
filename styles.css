@@ -245,7 +245,7 @@ select {
 
 .weather-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 10px;
 }
 
@@ -602,6 +602,7 @@ canvas {
 }
 
 .catch-form label,
+.catch-weather-field,
 .catch-comment {
   display: grid;
   gap: 4px;
@@ -620,6 +621,42 @@ canvas {
   font: inherit;
 }
 
+.catch-context-preview {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  color: var(--ink);
+  background: #f8fbff;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--teal);
+  border-radius: 8px;
+}
+
+.catch-context-preview p {
+  margin: 0;
+}
+
+.catch-context-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.catch-context-grid span {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.catch-context-grid strong {
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+}
+
 .catch-form-actions {
   display: flex;
   flex-wrap: wrap;
@@ -636,7 +673,7 @@ canvas {
 
 .catch-stats {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
 }
 

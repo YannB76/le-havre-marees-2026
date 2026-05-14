@@ -10,7 +10,7 @@
     <title>Le Havre Marées 2026</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="apple-touch-icon" href="icons/icon.svg">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=36">
   </head>
   <body>
     <div class="app-shell">
@@ -79,6 +79,10 @@
               <article>
                 <span class="eyebrow">Houle</span>
                 <strong id="weather-wave">-</strong>
+              </article>
+              <article>
+                <span class="eyebrow">Pression</span>
+                <strong id="weather-pressure">-</strong>
               </article>
             </div>
             <p class="weather-advice" id="weather-advice">Prévision météo indicative en cours de chargement.</p>
@@ -243,6 +247,13 @@
             </article>
             <article class="weather-chart-card">
               <div class="chart-title">
+                <span>Pression atmosphérique</span>
+                <span>hPa</span>
+              </div>
+              <canvas id="pressure-chart" width="740" height="280"></canvas>
+            </article>
+            <article class="weather-chart-card">
+              <div class="chart-title">
                 <span>Houle</span>
                 <span>mètres et période</span>
               </div>
@@ -329,13 +340,17 @@
               <label><span>Type de pêche</span><input id="catch-method" type="text"></label>
               <label><span>Appât / leurre</span><input id="catch-bait" type="text"></label>
               <label><span>Marée associée</span><input id="catch-tide" type="text"></label>
-              <label><span>Météo</span><input id="catch-weather" type="text"></label>
+            </div>
+            <label class="catch-weather-field"><span>Météo</span><textarea id="catch-weather" rows="2"></textarea></label>
+            <div class="catch-context-preview" id="catch-context-preview" aria-live="polite">
+              <span class="eyebrow">Conditions détectées</span>
+              <p>Choisis une date et une heure pour afficher la marée et la météo disponibles.</p>
             </div>
             <label class="catch-comment"><span>Commentaire</span><textarea id="catch-comment" rows="3"></textarea></label>
             <datalist id="species-list"></datalist>
             <div class="catch-form-actions">
               <button class="compact-button" id="catch-submit" type="submit">Ajouter la prise</button>
-              <button class="compact-button" id="catch-prefill" type="button">Préremplir avec la date</button>
+              <button class="compact-button" id="catch-prefill" type="button">Préremplir date & météo</button>
               <button class="compact-button is-hidden" id="catch-cancel-edit" type="button">Annuler la modification</button>
             </div>
             <p class="catch-regulation-preview" id="catch-regulation-preview">Renseigne une espèce et une taille pour vérifier la maille si disponible.</p>
@@ -367,6 +382,6 @@
       </footer>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=36"></script>
   </body>
 </html>
