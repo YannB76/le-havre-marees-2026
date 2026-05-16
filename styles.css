@@ -1035,6 +1035,182 @@ canvas {
   border-radius: 12px;
 }
 
+.departure-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.departure-actions .is-active {
+  color: var(--harbor);
+  background: var(--sand);
+  border-color: rgba(217, 173, 85, 0.8);
+}
+
+.departure-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  padding: 16px;
+  color: #ffffff;
+  background: linear-gradient(120deg, #1f3a5f, #0f766e);
+  border: 1px solid rgba(217, 173, 85, 0.7);
+  border-radius: 10px;
+}
+
+.departure-card.is-medium {
+  background: linear-gradient(120deg, #475569, #0f766e);
+}
+
+.departure-card.is-low {
+  background: linear-gradient(120deg, #475569, #64748b);
+}
+
+.departure-main strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 1.45rem;
+}
+
+.departure-main p {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.departure-badge {
+  display: grid;
+  place-items: center;
+  min-width: 96px;
+  min-height: 72px;
+  padding: 8px;
+  color: var(--harbor);
+  background: var(--sand);
+  border-radius: 10px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.departure-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.departure-grid article {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+}
+
+.departure-grid span,
+.departure-grid small {
+  color: rgba(255, 255, 255, 0.78);
+  font-weight: 700;
+}
+
+.departure-grid strong {
+  font-size: 1.05rem;
+}
+
+.departure-evolution {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.departure-evolution h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1rem;
+}
+
+.departure-evolution p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.88);
+  font-weight: 800;
+}
+
+.departure-table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+}
+
+.departure-evolution-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.departure-evolution-table th,
+.departure-evolution-table td {
+  padding: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  text-align: left;
+  vertical-align: top;
+}
+
+.departure-evolution-table thead th {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.86rem;
+}
+
+.departure-evolution-table tbody tr:last-child th,
+.departure-evolution-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.departure-evolution-table tbody th {
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.departure-evolution-table span {
+  display: block;
+  margin-top: 2px;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.82rem;
+}
+
+.departure-evolution-table .trend-badge {
+  display: inline-block;
+  color: var(--harbor);
+}
+
+.trend-badge {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 2px 7px;
+  color: var(--harbor);
+  background: rgba(255, 255, 255, 0.78);
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.trend-badge.is-up {
+  color: #7f1d1d;
+  background: #fee2e2;
+}
+
+.trend-badge.is-down {
+  color: #064e3b;
+  background: #d1fae5;
+}
+
+.trend-badge.is-neutral {
+  color: #334155;
+  background: #e2e8f0;
+}
+
 .weather-chart-grid {
   display: grid;
   gap: 14px;
@@ -1424,6 +1600,10 @@ canvas {
     order: 1;
   }
 
+  .departure-panel {
+    order: 1;
+  }
+
   .weather-dashboard {
     order: 1;
   }
@@ -1442,11 +1622,13 @@ canvas {
 
   .panel-heading,
   .big-tide-card,
+  .departure-card,
   .fishing-trip-dashboard,
   .best-fishing-slot {
     grid-template-columns: 1fr;
   }
 
+  .departure-badge,
   .trip-dashboard-score,
   .best-slot-score {
     justify-self: start;

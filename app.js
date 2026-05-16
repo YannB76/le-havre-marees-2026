@@ -158,6 +158,7 @@ const state = {
   bigTideThreshold: 95,
   bigTideMonth: "all",
   weatherWindUnit: "kmh",
+  departureOffsetMinutes: 0,
   catches: [],
   editingCatchId: null,
   weather: null,
@@ -215,6 +216,13 @@ const els = {
   monthSelect: document.querySelector("#month-select"),
   viewButtons: document.querySelectorAll("[data-view]"),
   dayView: document.querySelector("#day-view"),
+  departureView: document.querySelector("#departure-view"),
+  departureButtons: document.querySelectorAll("[data-departure-offset]"),
+  departureCard: document.querySelector("#departure-card"),
+  departureVerdict: document.querySelector("#departure-verdict"),
+  departureAdvice: document.querySelector("#departure-advice"),
+  departureBadge: document.querySelector("#departure-badge"),
+  departureGrid: document.querySelector("#departure-grid"),
   weatherView: document.querySelector("#weather-view"),
   bigTidesView: document.querySelector("#big-tides-view"),
   moonCalendarView: document.querySelector("#moon-calendar-view"),
@@ -353,6 +361,12 @@ function setupControls() {
     state.weatherWindUnit = els.weatherWindUnit.value;
     renderWeatherDashboard();
   });
+  els.departureButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      state.departureOffsetMinutes = Number(button.dataset.departureOffset) || 0;
+      renderDeparture();
+    });
+  });
   els.regulationSearch.addEventListener("input", () => {
     renderFishingRegulations();
   });
@@ -444,6 +458,7 @@ function render() {
   renderAstronomy();
   renderWeatherPrototype();
   renderWeatherDashboard();
+  renderDeparture();
   renderDayList(monthKey);
   renderBigTides();
   renderMoonCalendar();
@@ -486,7 +501,16 @@ async function loadWeatherPrototype() {
         "wind_gusts_10m_max",
         "wind_direction_10m_dominant"
       ].join(","),
-      hourly: ["cloud_cover", "pressure_msl"].join(",")
+      hourly: [
+        "temperature_2m",
+        "precipitation",
+        "weather_code",
+        "cloud_cover",
+        "pressure_msl",
+        "wind_speed_10m",
+        "wind_gusts_10m",
+        "wind_direction_10m"
+      ].join(",")
     }).toString();
 
     const marineUrl = new URL("https://marine-api.open-meteo.com/v1/marine");
@@ -496,7 +520,8 @@ async function loadWeatherPrototype() {
       timezone: "Europe/Paris",
       forecast_days: "7",
       cell_selection: "sea",
-      daily: ["wave_height_max", "wave_period_max", "wave_direction_dominant", "sea_surface_temperature_max"].join(",")
+      daily: ["wave_height_max", "wave_period_max", "wave_direction_dominant", "sea_surface_temperature_max"].join(","),
+      hourly: ["wave_height", "wave_period", "wave_direction", "sea_surface_temperature"].join(",")
     }).toString();
 
     const [weatherResponse, marineResponse] = await Promise.all([
@@ -516,6 +541,7 @@ async function loadWeatherPrototype() {
   }
   renderWeatherPrototype();
   renderWeatherDashboard();
+  renderDeparture();
   if (!state.editingCatchId) updateCatchContextFields();
   renderCatchLog();
   renderCatchRegulationPreview();
@@ -969,6 +995,277 @@ function weatherAdviceFor(data) {
   return parts.join(" ");
 }
 
+function renderDeparture() {
+  if (!els.departureView) return;
+  els.departureButtons.forEach((button) => {
+    button.classList.toggle("is-active", Number(button.dataset.departureOffset) === state.departureOffsetMinutes);
+  });
+
+  const departure = new Date(Date.now() + state.departureOffsetMinutes * 60000);
+  const date = clampDate(toIsoDate(departure));
+  const minutes = departure.getHours() * 60 + departure.getMinutes();
+  const time = minutesToClock(minutes);
+  const weather = weatherAtDateTime(date, time) || weatherForDate(date);
+  const hourlyForecast = departureHourlyForecast(date, time);
+  const tideContext = tideContextForDateTime(date, time);
+  const scoreSlot = tideContext.referenceEvent && weather
+    ? scoreFishingSlot(tideContext.referenceEvent, weather, maxCoefficientForDate(date))
+    : null;
+  const score = scoreSlot ? departureScore(scoreSlot.score, weather, tideContext) : null;
+
+  if (!weather || !tideContext.referenceEvent) {
+    els.departureVerdict.textContent = "Départ à vérifier";
+    els.departureAdvice.textContent = "Les données de marée ou de météo ne sont pas disponibles pour cette heure.";
+    els.departureBadge.textContent = "--";
+    els.departureGrid.innerHTML = departureGridHtml({ date, time, tideContext, weather, hourlyForecast });
+    els.departureCard.className = "departure-card";
+    return;
+  }
+
+  els.departureVerdict.textContent = departureVerdict(score);
+  els.departureAdvice.textContent = departureAdvice(score, weather, tideContext);
+  els.departureBadge.textContent = departureBadge(score);
+  els.departureGrid.innerHTML = departureGridHtml({ date, time, tideContext, weather, scoreSlot, hourlyForecast });
+  els.departureCard.className = `departure-card ${departureClass(score)}`;
+}
+
+function tideContextForDateTime(dateString, time) {
+  const timestamp = parseLocalDate(dateString).getTime() + toMinutes(time) * 60000;
+  const previous = [...state.events].reverse().find((event) => event.sortTime <= timestamp);
+  const next = state.events.find((event) => event.sortTime >= timestamp);
+  const referenceEvent = next || previous || null;
+  const height = estimatedHeightForDateTime(dateString, time);
+  const direction = next
+    ? (next.type === "Pleine mer" ? "montante" : "descendante")
+    : "à vérifier";
+  return {
+    previous,
+    next,
+    referenceEvent,
+    height,
+    direction,
+    minutesToNext: next ? Math.round((next.sortTime - timestamp) / 60000) : null
+  };
+}
+
+function weatherAtDateTime(dateString, time) {
+  const weatherHourly = state.weather?.forecast?.hourly;
+  if (!weatherHourly?.time?.length) return null;
+  const target = `${dateString}T${time.slice(0, 2)}:00`;
+  const index = weatherHourly.time.indexOf(target);
+  if (index < 0) return null;
+  const marine = marineAtDateTime(dateString, time);
+  return {
+    date: dateString,
+    time,
+    tempMin: weatherHourly.temperature_2m?.[index],
+    tempMax: weatherHourly.temperature_2m?.[index],
+    weatherCode: weatherHourly.weather_code?.[index],
+    cloudCover: weatherHourly.cloud_cover?.[index],
+    pressure: weatherHourly.pressure_msl?.[index],
+    rain: weatherHourly.precipitation?.[index],
+    wind: weatherHourly.wind_speed_10m?.[index],
+    gust: weatherHourly.wind_gusts_10m?.[index],
+    windDirection: weatherHourly.wind_direction_10m?.[index],
+    wave: marine?.wave,
+    wavePeriod: marine?.wavePeriod,
+    waveDirection: marine?.waveDirection,
+    seaTemperature: marine?.seaTemperature
+  };
+}
+
+function marineAtDateTime(dateString, time) {
+  const hourly = state.weather?.marine?.hourly;
+  if (!hourly?.time?.length) return null;
+  const target = `${dateString}T${time.slice(0, 2)}:00`;
+  const index = hourly.time.indexOf(target);
+  if (index < 0) return null;
+  return {
+    wave: hourly.wave_height?.[index],
+    wavePeriod: hourly.wave_period?.[index],
+    waveDirection: hourly.wave_direction?.[index],
+    seaTemperature: hourly.sea_surface_temperature?.[index]
+  };
+}
+
+function departureHourlyForecast(dateString, time) {
+  return [0, 60, 120, 180].map((offset) => {
+    const nextMinutes = toMinutes(time) + offset;
+    const forecastDate = toIsoDate(new Date(parseLocalDate(dateString).getTime() + nextMinutes * 60000));
+    const forecastTime = minutesToClock(nextMinutes);
+    const weather = weatherAtDateTime(forecastDate, forecastTime) || weatherForDate(forecastDate);
+    return {
+      label: offset === 0 ? "Départ" : `+${offset / 60}h`,
+      time: forecastTime,
+      weather
+    };
+  });
+}
+
+function departureScore(baseScore, weather, tideContext) {
+  let score = baseScore;
+  if ((weather.gust || 0) >= 70) score -= 18;
+  else if ((weather.gust || 0) >= 55) score -= 8;
+  if ((weather.wave || 0) >= 2.1) score -= 18;
+  else if ((weather.wave || 0) >= 1.6) score -= 8;
+  if ((weather.rain || 0) >= 8) score -= 8;
+  if (tideContext.minutesToNext !== null && tideContext.minutesToNext <= 20) score -= 4;
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+function departureVerdict(score) {
+  if (score === null) return "Départ à vérifier";
+  if (score >= 75) return "Départ favorable";
+  if (score >= 55) return "Départ possible, prudence";
+  return "Départ déconseillé sans vérification";
+}
+
+function departureBadge(score) {
+  if (score === null) return "--";
+  if (score >= 75) return "OK";
+  if (score >= 55) return "Prudence";
+  return "À vérifier";
+}
+
+function departureClass(score) {
+  if (score === null) return "";
+  if (score >= 75) return "is-good";
+  if (score >= 55) return "is-medium";
+  return "is-low";
+}
+
+function departureAdvice(score, weather, tideContext) {
+  const details = [];
+  if ((weather.gust || 0) >= 55) details.push("rafales soutenues");
+  if ((weather.wave || 0) >= 1.6) details.push("houle formée");
+  if ((weather.rain || 0) >= 6) details.push("pluie marquée");
+  if (tideContext.minutesToNext !== null && tideContext.minutesToNext <= 20) details.push("marée proche");
+  if (score >= 75 && !details.length) return "Conditions plutôt favorables pour partir, sous réserve du poste et de la sécurité locale.";
+  if (details.length) return `Points à surveiller : ${details.join(", ")}. Vérifie le poste, la houle et le retour de la mer.`;
+  return "Conditions possibles, mais garde une marge de sécurité et vérifie la météo marine officielle.";
+}
+
+function departureGridHtml({ date, time, tideContext, weather, scoreSlot, hourlyForecast = [] }) {
+  const next = tideContext.next;
+  const nextText = next
+    ? `${next.type} ${formatTimeForText(next.time)}${next.coefficient ? ` · coeff. ${next.coefficient}` : ""}`
+    : "-";
+  const durationText = tideContext.minutesToNext !== null ? relativeMinutesText(tideContext.minutesToNext) : "-";
+  const moon = phaseForDate(date);
+  const astronomy = state.astronomy[date] ?? {};
+  const sunsetWarning = astronomy.sunset ? sunsetText(time, astronomy.sunset) : "-";
+  return `
+    <article><span>Départ</span><strong>${formatShortDate(date)} · ${formatTimeForText(time)}</strong><small>${state.departureOffsetMinutes ? `dans ${state.departureOffsetMinutes} min` : "maintenant"}</small></article>
+    <article><span>Marée</span><strong>${escapeHtml(tideContext.direction)}</strong><small>${escapeHtml(nextText)} · ${durationText}</small></article>
+    <article><span>Hauteur estimée</span><strong>${Number.isFinite(tideContext.height) ? formatHeight(tideContext.height) : "-"}</strong><small>${scoreSlot ? `${scoreSlot.score}/100 marée+météo` : "score -"}</small></article>
+    <article><span>Vent</span><strong>${Math.round(weather?.wind || 0)} km/h ${cardinalDirection(weather?.windDirection)}</strong><small>rafales ${Math.round(weather?.gust || 0)} km/h</small></article>
+    <article><span>Houle</span><strong>${Number.isFinite(weather?.wave) ? `${formatWeatherNumber(weather.wave, 1)} m` : "-"}</strong><small>${Number.isFinite(weather?.wavePeriod) ? `${formatWeatherNumber(weather.wavePeriod, 0)} s` : "période -"}</small></article>
+    <article><span>Ciel / pluie</span><strong>${weather ? `${cloudCoverPercent(weather)}% · ${escapeHtml(cloudShortLabelForCode(weather.weatherCode))}` : "-"}</strong><small>${formatWeatherNumber(weather?.rain || 0, 1)} mm</small></article>
+    <article><span>Pression</span><strong>${Number.isFinite(weather?.pressure) ? `${Math.round(weather.pressure)} hPa` : "-"}</strong><small>${escapeHtml(pressureConditionLabel(weather?.pressure) || "-")}</small></article>
+    <article><span>Soleil / lune</span><strong>${escapeHtml(sunsetWarning)}</strong><small>${escapeHtml(phaseShortLabel(moon))}</small></article>
+    ${departureEvolutionHtml(hourlyForecast)}
+  `;
+}
+
+function departureEvolutionHtml(hourlyForecast) {
+  if (!hourlyForecast.length) return "";
+  const summary = departureEvolutionSummary(hourlyForecast);
+  const rows = hourlyForecast.map((item, index) => {
+    const weather = item.weather;
+    const previous = index > 0 ? hourlyForecast[index - 1].weather : null;
+    return `
+      <tr>
+        <th scope="row">${escapeHtml(item.label)}<span>${formatTimeForText(item.time)}</span></th>
+        <td>${weatherValueWithTrend(weather?.rain, previous?.rain, "mm", 1, "rain")}</td>
+        <td>${weatherValueWithTrend(weather?.wind, previous?.wind, "km/h", 0, "wind")}</td>
+        <td>${weatherValueWithTrend(weather?.gust, previous?.gust, "km/h", 0, "gust")}</td>
+        <td>${weatherValueWithTrend(weather?.wave, previous?.wave, "m", 1, "wave")}</td>
+        <td>${weather ? `${cloudCoverPercent(weather)}%<span>${escapeHtml(cloudShortLabelForCode(weather.weatherCode))}</span>` : "-"}</td>
+      </tr>
+    `;
+  }).join("");
+  return `
+    <section class="departure-evolution" aria-label="Évolution météo sur 3 heures">
+      <h3>Évolution météo sur 3 h</h3>
+      <p>${escapeHtml(summary)}</p>
+      <div class="departure-table-wrap">
+        <table class="departure-evolution-table">
+          <thead>
+            <tr>
+              <th scope="col">Heure</th>
+              <th scope="col">Pluie</th>
+              <th scope="col">Vent</th>
+              <th scope="col">Rafales</th>
+              <th scope="col">Houle</th>
+              <th scope="col">Ciel</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
+function departureEvolutionSummary(hourlyForecast) {
+  const first = hourlyForecast[0]?.weather;
+  const last = hourlyForecast[hourlyForecast.length - 1]?.weather;
+  if (!first || !last) return "Evolution horaire indicative selon Open-Meteo.";
+  const parts = [];
+  parts.push(trendSentence(last.rain, first.rain, "pluie", 0.3, "augmente", "diminue"));
+  parts.push(trendSentence(last.wind, first.wind, "vent", 4, "force", "faiblit"));
+  parts.push(trendSentence(last.gust, first.gust, "rafales", 6, "forcissent", "baissent"));
+  parts.push(trendSentence(last.wave, first.wave, "houle", 0.2, "monte", "baisse"));
+  return parts.filter(Boolean).join(" · ") || "Conditions globalement stables sur les 3 prochaines heures.";
+}
+
+function trendSentence(endValue, startValue, label, threshold, upText, downText) {
+  if (!Number.isFinite(endValue) || !Number.isFinite(startValue)) return "";
+  const diff = endValue - startValue;
+  if (Math.abs(diff) < threshold) return `${capitalize(label)} stable`;
+  return `${capitalize(label)} ${diff > 0 ? upText : downText}`;
+}
+
+function weatherValueWithTrend(value, previousValue, unit, decimals, type) {
+  if (!Number.isFinite(value)) return "-";
+  const formatted = decimals ? formatWeatherNumber(value, decimals) : Math.round(value);
+  return `${formatted} ${unit}${trendBadge(value, previousValue, type)}`;
+}
+
+function trendBadge(value, previousValue, type) {
+  if (!Number.isFinite(value) || !Number.isFinite(previousValue)) {
+    return "";
+  }
+  const thresholds = {
+    rain: 0.2,
+    wind: 3,
+    gust: 5,
+    wave: 0.15
+  };
+  const diff = value - previousValue;
+  const threshold = thresholds[type] ?? 1;
+  if (Math.abs(diff) < threshold) return '<span class="trend-badge is-neutral">→ stable</span>';
+  const direction = diff > 0 ? "hausse" : "baisse";
+  const className = diff > 0 ? "is-up" : "is-down";
+  const arrow = diff > 0 ? "↑" : "↓";
+  return `<span class="trend-badge ${className}">${arrow} ${direction}</span>`;
+}
+
+function relativeMinutesText(minutes) {
+  if (minutes < 0) return "passé";
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (!hours) return `dans ${mins} min`;
+  return `dans ${hours}h${String(mins).padStart(2, "0")}`;
+}
+
+function sunsetText(time, sunset) {
+  const diff = toMinutes(sunset) - toMinutes(time);
+  if (diff < 0) return `soleil couché ${formatTimeForText(sunset)}`;
+  if (diff <= 90) return `coucher ${formatTimeForText(sunset)}`;
+  return `jour jusqu'à ${formatTimeForText(sunset)}`;
+}
+
 function nextMoonPhaseLabel(dateString) {
   const next = state.moonPhases.find((item) => item.date >= dateString);
   if (!next) return "-";
@@ -977,6 +1274,7 @@ function nextMoonPhaseLabel(dateString) {
 
 function renderView() {
   els.dayView.classList.toggle("is-hidden", state.view !== "day");
+  els.departureView.classList.toggle("is-hidden", state.view !== "departure");
   els.weatherView.classList.toggle("is-hidden", state.view !== "weather");
   els.bigTidesView.classList.toggle("is-hidden", state.view !== "big-tides");
   els.moonCalendarView.classList.toggle("is-hidden", state.view !== "moon-calendar");

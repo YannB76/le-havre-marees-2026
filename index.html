@@ -10,7 +10,7 @@
     <title>Le Havre Marées 2026</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="apple-touch-icon" href="icons/icon.svg">
-    <link rel="stylesheet" href="styles.css?v=39">
+    <link rel="stylesheet" href="styles.css?v=42">
   </head>
   <body>
     <div class="app-shell">
@@ -22,6 +22,7 @@
         </div>
         <nav class="view-menu" aria-label="Navigation principale">
           <button class="view-button is-active" type="button" data-view="day">Aujourd'hui</button>
+          <button class="view-button" type="button" data-view="departure">🎒 Départ pêche</button>
           <button class="view-button" type="button" data-view="weather">Météo</button>
           <button class="view-button" type="button" data-view="big-tides">Grosses marées</button>
           <button class="view-button" type="button" data-view="moon-calendar">Calendrier lunaire</button>
@@ -141,6 +142,36 @@
             </table>
           </div>
 
+        </section>
+
+        <section class="departure-panel view-panel is-hidden" id="departure-view" aria-labelledby="departure-title">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Aide au départ immédiat</span>
+              <h2 id="departure-title">🎒 Départ pêche — Le Havre</h2>
+            </div>
+          </div>
+
+          <div class="departure-actions" aria-label="Choisir l'heure de départ">
+            <button class="compact-button is-active" type="button" data-departure-offset="0">Maintenant</button>
+            <button class="compact-button" type="button" data-departure-offset="60">Dans 1 h</button>
+            <button class="compact-button" type="button" data-departure-offset="120">Dans 2 h</button>
+            <button class="compact-button" type="button" data-departure-offset="180">Dans 3 h</button>
+          </div>
+
+          <section class="departure-card" id="departure-card" aria-live="polite">
+            <div class="departure-main">
+              <span class="eyebrow">Diagnostic rapide</span>
+              <strong id="departure-verdict">Calcul en cours</strong>
+              <p id="departure-advice">Analyse de la marée, de la météo et des informations utiles.</p>
+            </div>
+            <div class="departure-badge" id="departure-badge">--</div>
+            <div class="departure-grid" id="departure-grid"></div>
+          </section>
+
+          <p class="notice">
+            Ce diagnostic est indicatif. Vérifie toujours les horaires officiels, la météo marine, le vent, la houle, l'accès au poste et le retour de la mer avant de partir.
+          </p>
         </section>
 
         <section class="big-tides-panel view-panel is-hidden" id="big-tides-view" aria-labelledby="big-tides-title">
@@ -400,6 +431,6 @@
       </footer>
     </div>
 
-    <script src="app.js?v=39"></script>
+    <script src="app.js?v=42"></script>
   </body>
 </html>
